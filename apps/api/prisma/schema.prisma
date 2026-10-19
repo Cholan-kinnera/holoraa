@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum ConversationType {
+  DM
+  GROUP
+  CHANNEL
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+  ANNOUNCEMENT
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  CALL
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+// ── User & Profile ────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String?   @map("password_hash")
+  displayName  String?   @map("display_name")
+  avatarUrl    String?   @map("avatar_url")
+  bannerUrl    String?   @map("banner_url")
+  bio          String?
+  isOnline     Boolean   @default(false) @map("is_online")
+  lastSeenAt   DateTime? @map("last_seen_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  ownedServers        Server[]             @relation("ServerOwner")
+  memberships         Member[]
+  sentMessages        Message[]            @relation("MessageSender")
+  reactions           Reaction[]
+  readReceipts        ReadReceipt[]
+  createdConversations Conversation[]      @relation("ConversationCreator")
+  conversationMembers ConversationMember[]
+  reportsFiled        Report[]             @relation("ReportReporter")
+  reportsAgainst      Report[]             @relation("ReportReported")
+  blockedUsers        Block[]              @relation("Blocker")
+  blockedByUsers      Block[]              @relation("Blocked")
+  callsInitiated      Call[]               @relation("CallInitiator")
+  callParticipants    CallParticipant[]
+  roomsCreated        Room[]               @relation("RoomCreator")
+
+  @@map("users")
+}
+
+// ── Conversation ──────────────────────────────────────────────
+
+model Conversation {
+  id        String           @id @default(uuid())
+  type      ConversationType
+  name      String?
+  avatarUrl String?          @map("avatar_url")
+  createdById String         @map("created_by_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  createdBy User                 @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members   ConversationMember[]
+  messages  Message[]
+  readReceipts ReadReceipt[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  userId         String       @map("user_id")
+  joinedAt       DateTime     @default(now()) @map("joined_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_members")
+}
+
+// ── Server & Channel (Community) ──────────────────────────────
+
+model Server {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  iconUrl     String?  @map("icon_url")
+  bannerUrl   String?  @map("banner_url")
+  ownerId     String   @map("owner_id")
+  isPublic    Boolean  @default(false) @map("is_public")
+  inviteCode  String?  @unique @map("invite_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner       User     @relation("ServerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  channels    Channel[]
+  members     Member[]
+  roles       Role[]
+
+  @@map("servers")
+}
+
+model Channel {
+  id          String      @id @default(uuid())
+  serverId    String      @map("server_id")
+  name        String
+  type        ChannelType @default(TEXT)
+  topic       String?
+  position    Int         @default(0)
+  isArchived  Boolean     @default(false) @map("is_archived")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  server      Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@map("channels")
+}
+
+model Member {
+  id        String   @id @default(uuid())
+  serverId  String   @map("server_id")
+  userId    String   @map("user_id")
+  nickname  String?
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles     MemberRole[]
+
+  @@unique([serverId, userId])
+  @@map("members")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  serverId    String   @map("server_id")
+  name        String
+  color       String?
+  position    Int      @default(0)
+  permissions BigInt   @default(0)
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  server      Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members     MemberRole[]
+
+  @@map("roles")
+}
+
+model MemberRole {
+  memberId String @map("member_id")
+  roleId   String @map("role_id")
+
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role     Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, roleId])
+  @@map("member_roles")
+}
+
+// ── Message & Social ──────────────────────────────────────────
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String?      @map("conversation_id")
+  channelId      String?      @map("channel_id")
+  senderId       String       @map("sender_id")
+  type           MessageType  @default(TEXT)
+  content        String
+  replyToId      String?      @map("reply_to_id")
+  threadId       String?      @map("thread_id")
+  isEdited       Boolean      @default(false) @map("is_edited")
+  isPinned       Boolean      @default(false) @map("is_pinned")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  channel        Channel?      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender         User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo        Message?      @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]     @relation("Replies")
+  attachments    Attachment[]
+  reactions      Reaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([channelId, createdAt])
+  @@map("messages")
+}
+
+model Attachment {
+  id        String         @id @default(uuid())
+  messageId String         @map("message_id")
+  type      AttachmentType
+  url       String
+  filename  String
+  sizeBytes Int            @map("size_bytes")
+  mimeType  String         @map("mime_type")
+  width     Int?
+  height    Int?
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  message   Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("reactions")
+}
+
+model ReadReceipt {
+  userId             String   @map("user_id")
+  conversationId     String   @map("conversation_id")
+  lastReadMessageId  String   @map("last_read_message_id")
+  readAt             DateTime @default(now()) @map("read_at")
+
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation       Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@map("read_receipts")
+}
+
+// ── Rooms & Calls (LiveKit Phase Foundation) ──────────────────
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  createdById String   @map("created_by_id")
+  isWaitingRoomEnabled Boolean @default(true) @map("is_waiting_room_enabled")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy   User     @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("rooms")
+}
+
+model Call {
+  id          String     @id @default(uuid())
+  initiatorId String     @map("initiator_id")
+  status      CallStatus @default(INITIATED)
+  startedAt   DateTime   @default(now()) @map("started_at")
+  endedAt     DateTime?  @map("ended_at")
+
+  initiator    User              @relation("CallInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  participants CallParticipant[]
+
+  @@map("calls")
+}
+
+model CallParticipant {
+  id       String    @id @default(uuid())
+  callId   String    @map("call_id")
+  userId   String    @map("user_id")
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+
+  call     Call      @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, userId])
+  @@map("call_participants")
+}
+
+// ── Safety & Moderation ───────────────────────────────────────
+
+model Report {
+  id         String       @id @default(uuid())
+  reporterId String       @map("reporter_id")
+  reportedId String       @map("reported_id")
+  reason     String
+  status     ReportStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  reporter   User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported   User         @relation("ReportReported", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model Block {
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@map("blocks")
+}
