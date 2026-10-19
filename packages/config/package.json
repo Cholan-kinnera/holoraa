@@ -1,0 +1,21 @@
+{
+  "name": "@holoraa/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared ESLint, TypeScript and Prettier configurations for Holoraa.",
+  "type": "module",
+  "exports": {
+    "./eslint-base": "./eslint-base.mjs",
+    "./eslint-next": "./eslint-next.mjs",
+    "./eslint-nest": "./eslint-nest.mjs",
+    "./tsconfig-base": "./tsconfig.base.json",
+    "./tsconfig-next": "./tsconfig.next.json",
+    "./tsconfig-nest": "./tsconfig.nest.json"
+  },
+  "devDependencies": {
+    "eslint": "10.13.0",
+    "typescript-eslint": "8.72.0",
+    "typescript": "7.0.2",
+    "@eslint/js": "10.13.0"
+  }
+}

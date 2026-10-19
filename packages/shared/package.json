@@ -1,0 +1,31 @@
+{
+  "name": "@holoraa/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Zod schemas, TypeScript types and constants for Holoraa.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "dev": "tsc --watch --project tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@holoraa/config": "workspace:*",
+    "typescript": "7.0.2",
+    "eslint": "10.13.0",
+    "vitest": "5.0.5"
+  }
+}
