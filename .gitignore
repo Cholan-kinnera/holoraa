@@ -1,0 +1,25 @@
+# Build output
+bin/
+
+# Go test and coverage artifacts
+*.test
+*.out
+coverage.out
+
+# Environment: real values are never committed.
+# A committed .env.example documents keys only.
+.env
+.env.*
+!.env.example
+
+# Archives and downloads (toolchains are kept outside the repository)
+*.tar.gz
+*.tgz
+*.zip
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
