@@ -1,53 +1,38 @@
-import { createApiClient, readApiBaseUrl } from "@/lib/api/client";
-import { loadStatus, type CheckState, type StatusReport } from "@/lib/status";
+import type { Metadata } from "next";
 
-// Each request checks the live API. Nothing is cached.
-export const dynamic = "force-dynamic";
+import { FinalCta } from "@/components/landing/FinalCta";
+import { Holories } from "@/components/landing/Holories";
+import { Hero } from "@/components/landing/Hero";
+import { Principles } from "@/components/landing/Principles";
+import { ProductPreview } from "@/components/landing/ProductPreview";
+import { SiteFooter } from "@/components/landing/SiteFooter";
+import { SiteHeader } from "@/components/landing/SiteHeader";
+import { MotionRoot } from "@/components/ui/MotionRoot";
 
-const LABELS: Record<CheckState, string> = {
-  ok: "Working",
-  unreachable: "Not reachable",
-  unknown: "Not checked",
-  "not-configured": "Not configured",
+export const metadata: Metadata = {
+  title: "Talk, share, and hang out, simply",
+  description: "One minimal social space to chat, hang out, and share. Private by default, with no ads and no feed built to hold your attention.",
 };
 
-export default async function StatusPage() {
-  const baseUrl = readApiBaseUrl();
-  const report = await loadStatus(baseUrl === null ? null : createApiClient(baseUrl));
+// Dynamic so every request gets its own CSP nonce. A prerendered page would have
+// inline scripts without a nonce, and the strict script-src would block them.
+export const dynamic = "force-dynamic";
 
+export default function LandingPage() {
   return (
-    <main className="page">
-      <header>
-        <h1>Holoraa status</h1>
-        <p className="lede">Foundation check. Nothing user-facing exists yet.</p>
-      </header>
-
-      <section className="checks" aria-label="System checks">
-        <StatusCard title="API" state={report.api.state} />
-        <StatusCard
-          title="Database"
-          state={report.database.state}
-          detail={report.database.state === "unreachable" ? report.database.detail : undefined}
-        />
-      </section>
-
-      <p className="meta">
-        Checked <time dateTime={report.checkedAt}>{formatTime(report)}</time>
-      </p>
-    </main>
+    <MotionRoot>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <SiteHeader />
+      <main id="main">
+        <Hero />
+        <ProductPreview />
+        <Principles />
+        <Holories />
+        <FinalCta />
+      </main>
+      <SiteFooter />
+    </MotionRoot>
   );
-}
-
-function StatusCard({ title, state, detail }: { title: string; state: CheckState; detail?: string }) {
-  return (
-    <article className={`card card--${state}`}>
-      <h2>{title}</h2>
-      <p className="state">{LABELS[state]}</p>
-      {detail ? <p className="detail">{detail.slice(0, 200)}</p> : null}
-    </article>
-  );
-}
-
-function formatTime(report: StatusReport): string {
-  return new Date(report.checkedAt).toLocaleTimeString("en-GB", { timeZone: "UTC", hour12: false }) + " UTC";
 }
