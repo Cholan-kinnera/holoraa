@@ -94,8 +94,15 @@ The database listens on loopback only.
 
 ## 6. Stopping, and what is kept
 
-- `make db-down` stops and removes the container. It keeps the data volume.
-- Deleting the volume erases local data. It is never done by a Make target. Run it by hand only if you intend to reset the database, for example `docker volume rm holoraa_v2_postgres_data`.
+- `make db-down` stops and removes the container. It keeps the data volume. Restart later with `make db-up`.
+- `docker stop holoraa-v2-postgres` stops the container and keeps everything else, including the container itself.
+- The Make targets never delete a volume and never use `-v`.
+- Deleting the volume erases all local data. Do this only by hand, and only to reset the development database:
+  1. Confirm the name: `docker volume inspect holoraa_v2_postgres_data`.
+  2. `make db-down`.
+  3. `docker volume rm holoraa_v2_postgres_data`.
+  4. `make db-up migrate-up` to create an empty database.
+- Legacy containers (`holoraa-postgres`, `holoraa-redis`, `akesis-postgres`) and their volumes belong to other projects. Never remove them as part of v2 work.
 
 ## 7. Tests
 
@@ -106,6 +113,7 @@ The database listens on loopback only.
 | `make web-check` | Web typecheck, lint, unit tests, production build | No |
 | `make contract-check` | OpenAPI lint and client drift check | No |
 | `make check-all` | All of the above | Yes |
+| `make e2e` | Status page against the real API and database: five states and the security headers. Stops and restarts `holoraa-v2-postgres`. | Yes |
 
 The integration tests create and drop their own scratch databases (`holoraa_test_*`). They do not touch `holoraa_dev`.
 
