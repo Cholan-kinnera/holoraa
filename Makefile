@@ -26,7 +26,7 @@ export VERSION
 MODULE  := github.com/Cholan-kinnera/holoraa/backend
 LDFLAGS := -X $(MODULE)/internal/version.Version=$(VERSION)
 
-.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db web-install web-check contract-check check-all
+.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db web-install web-check contract-check check-all e2e
 
 check: toolchain-check validate-version fmt-check vet test build
 	./bin/api -version
@@ -101,3 +101,8 @@ contract-check: web-install
 
 # Everything: Go gate, database-backed Go tests, web, and contract.
 check-all: check test-db web-check contract-check
+
+# Status page against the real API and database, five states plus headers.
+# Stops and restarts holoraa-v2-postgres. Requires web-check (for the build).
+e2e: build db-up
+	scripts/e2e-status.sh
