@@ -90,6 +90,25 @@ func TestWrongMethodReturnsProblemDetails(t *testing.T) {
 	assertProblem(t, rec, 405, "/v1/health")
 }
 
+func TestSecurityHeadersOnSuccessAndErrorResponses(t *testing.T) {
+	var logs bytes.Buffer
+	h := newTestRouter(t, stubPinger{}, &logs)
+
+	for _, target := range []string{"/v1/health", "/v1/nope"} {
+		rec := serve(h, http.MethodGet, target, nil)
+		want := map[string]string{
+			"X-Content-Type-Options": "nosniff",
+			"Referrer-Policy":        "no-referrer",
+			"Cache-Control":          "no-store",
+		}
+		for k, v := range want {
+			if got := rec.Header().Get(k); got != v {
+				t.Fatalf("%s: %s = %q, want %q", target, k, got, v)
+			}
+		}
+	}
+}
+
 func TestRequestIDIsGeneratedWhenAbsent(t *testing.T) {
 	var logs bytes.Buffer
 	h := newTestRouter(t, stubPinger{}, &logs)

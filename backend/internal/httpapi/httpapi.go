@@ -43,6 +43,7 @@ type Deps struct {
 // NewRouter returns the API handler.
 func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
+	r.Use(securityHeaders)
 	r.Use(requestID)
 	r.Use(accessLog(d.Log))
 	r.Use(recoverPanic(d.Log))
@@ -59,6 +60,19 @@ func NewRouter(d Deps) http.Handler {
 		v1.Get("/ready", d.Health.Ready)
 	})
 	return r
+}
+
+// securityHeaders sets defensive headers on every response, including errors.
+// HSTS is not set here: it belongs to the TLS terminator, not the plain-HTTP
+// listener that runs in development.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // requestID keeps a valid client-supplied ID or generates a new one. Invalid
