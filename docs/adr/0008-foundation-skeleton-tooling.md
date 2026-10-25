@@ -74,9 +74,21 @@ Package manager (D5a, proposed): **npm**. The legacy pnpm and Turborepo setup is
 
 Standard library `log/slog` (JSON handler), with key-based redaction. No external logging library.
 
-### Security headers
+### Security headers and request limits
 
-The API sets `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `Cache-Control: no-store` on every response. The web app sets `X-Content-Type-Options`, `Referrer-Policy` and `X-Frame-Options: DENY`. HSTS belongs at the TLS terminator and is not set here. A Content-Security-Policy is not set yet (see open items).
+- The API sets `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `Cache-Control: no-store` on every response, including errors.
+- The API rejects a request target longer than 2048 bytes with 414 Problem Details, and a header section larger than 16 KiB with 431 Problem Details. The server's own ceiling is 64 KiB, so the application's limit answers first.
+- The web app sets `X-Content-Type-Options`, `Referrer-Policy` and `X-Frame-Options: DENY`.
+- HSTS belongs at the TLS terminator and is not set here.
+
+### Content-Security-Policy (status page)
+
+- A nonce-based policy, set per request by `web/src/proxy.ts`, following the Next.js guide bundled with the installed version (`node_modules/next/dist/docs`).
+- `script-src` and `style-src` allow `'self'` and the request nonce only. `object-src`, `frame-ancestors` and `base-uri` are restricted.
+- **No `'unsafe-inline'` anywhere.** `'unsafe-eval'` appears only in development, because React needs it there. It is never in a production response.
+- `upgrade-insecure-requests` is omitted on purpose. The development server runs plain HTTP on loopback, and the directive would break it. HTTPS enforcement belongs to the TLS terminator.
+- Verified in production mode: every one of the 9 script tags carries the request nonce, and headless Chrome logs 0 CSP violations for the status page. A negative test confirmed that the same method reports a violation for a blocked inline script.
+- The page is dynamically rendered, which the nonce requires.
 
 ### Local database (D4, owner-approved as provisional development image)
 
@@ -104,11 +116,12 @@ Recheck commands and exact results are in the review report that accompanies thi
 3. **OpenAPI warnings, not silenced.**
    - `info.license` is missing. The licence is an owner decision (`TODO(owner)`).
    - `GET /v1/health` and `GET /v1/ready` declare no 4xx response. The handlers never return a 4xx on these operations. The unknown-route 404 and wrong-method 405 are path-level behaviour, and a 4xx added to an operation would describe behaviour that does not exist. The rule will be satisfied only if a real 4xx case appears.
-4. **Plain-text rejections from `net/http`.** Malformed requests (400) and oversized headers (431) are written by the standard library, not by the API, and are plain text rather than Problem Details. Fixing it means wrapping the server's error handling. It is not done.
-5. **Content-Security-Policy** for the web app is not set. A strict policy needs a nonce setup for Next.js inline scripts (M5 item in the threat model).
-6. **Node 24 for the Go and database steps.** Not run on Node 24. They do not depend on Node.
+4. **Residual plain-text rejections from `net/http`.** The application answers oversized targets (414) and header sections up to 64 KiB (431) with Problem Details. Two cases remain plain text, because `net/http` writes them before any handler runs: a malformed request line (400), and a header section above 64 KiB (431). Closing them needs a custom listener or a reverse proxy that normalises errors. Production should sit behind such a proxy (`TODO(owner)`).
+5. **Content-Security-Policy** is in place for the status page: nonce-based, with no unsafe sources in production. Future pages must follow the same pattern; the policy is in `web/src/lib/csp.ts`.
+6. **Node 24 coverage.** Node 24.22.1 ran the web gate, the contract gate and the end-to-end check. The Go and database steps ran on Node 26.11.1. They do not depend on Node.
 7. **PostgreSQL 17 production selection** (D4) is open. The development image is approved only as provisional.
 8. **D3** (Go linter) and **D5(b)** (web runtime validation library) are not decided. The skeleton uses neither.
 9. **D7** (CI runner and service containers) is not decided.
 10. **Blocked install script.** `npm ci` under npm 11 reports that the postinstall script of `unrs-resolver` was not run under npm's default script policy. Lint, typecheck, tests, and the build all pass without it. Approving it is a separate, explicit choice (`TODO(owner)`).
-11. **Browser end-to-end test.** Not added. The scripted check (`make e2e`) covers the same states at the HTTP and server-rendering level. A browser framework would add a browser download and another dependency, and is part of D5.
+11. **Browser check.** `make e2e` also loads the page in a headless browser, when one is installed (`google-chrome-stable` by default, or `HOLORAA_E2E_BROWSER`). It reports SKIP if none is found. No browser is installed by this repository, and no browser framework is added. A full browser test framework is part of D5.
+12. **Production database access.** Requirements are in [DATABASE_ACCESS.md](../engineering/DATABASE_ACCESS.md). The development role is a superuser, which is acceptable only on loopback. The template SQL was validated in a rolled-back transaction. It has not been run in any production environment, and production hosting is not chosen.

@@ -53,6 +53,10 @@ Migrations use goose and are forward-only SQL files in `backend/db/migrations/` 
 
 The legacy draft proposed a 1-hour recovery time and a 5-minute recovery point. Those are unverified targets, not commitments. See [../runbooks/database-restore.md](../runbooks/database-restore.md).
 
+## 5a. Database access
+
+Development uses a superuser role on a loopback-only container. Production requires separate, least-privilege roles, TLS, and SCRAM authentication. See [DATABASE_ACCESS.md](DATABASE_ACCESS.md).
+
 ## 6. Secrets
 
 - Secrets come only from the environment.
