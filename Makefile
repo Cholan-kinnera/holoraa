@@ -26,7 +26,7 @@ export VERSION
 MODULE  := github.com/Cholan-kinnera/holoraa/backend
 LDFLAGS := -X $(MODULE)/internal/version.Version=$(VERSION)
 
-.PHONY: check toolchain-check validate-version fmt-check vet test build clean
+.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status
 
 check: toolchain-check validate-version fmt-check vet test build
 	./bin/api -version
@@ -53,3 +53,21 @@ build: toolchain-check validate-version
 
 clean:
 	rm -rf bin
+
+# Local development database (PostgreSQL only). See docs/engineering/LOCAL_SETUP.md.
+# The compose file reads variables from .env in the repository root, so
+# --env-file is passed explicitly. The container and volume names are v2-specific.
+COMPOSE := docker compose --env-file .env -f infra/compose/docker-compose.yml
+
+dev-env:
+	scripts/dev-env.sh
+
+db-up: dev-env
+	$(COMPOSE) up -d --wait
+
+# Stops the container. The data volume is kept. Never add -v here.
+db-down:
+	$(COMPOSE) down
+
+db-status:
+	$(COMPOSE) ps
