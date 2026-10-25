@@ -4,15 +4,19 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/Cholan-kinnera/holoraa/backend/internal/auth"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/config"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/httpapi"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/mail"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/store"
 )
 
@@ -42,11 +46,23 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	sender, err := newSender(cfg.Mail)
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			Log:    log,
-			Health: health.New(pool, readinessTimeout, log),
+			Log:      log,
+			Health:   health.New(pool, readinessTimeout, log),
+			Auth:     auth.New(pool, cfg.AuthSecret, sender, rand.Reader),
+			Profiles: profile.NewRepo(pool),
+			Security: httpapi.Security{
+				CookieName:     cfg.CookieName,
+				CookieSecure:   cfg.CookieSecure,
+				AllowedOrigins: cfg.AllowedOrigins,
+			},
 		}),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
@@ -81,4 +97,17 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	log.Info("stopped")
 	return nil
+}
+
+// newSender returns the configured email sender. The Resend adapter is used
+// only when the configuration selects it.
+func newSender(m config.MailConfig) (mail.Sender, error) {
+	switch m.Provider {
+	case config.MailProviderFake:
+		return mail.NewFake(m.OutboxDir), nil
+	case config.MailProviderResend:
+		return mail.NewResend(m.ResendAPIKey, m.From), nil
+	default:
+		return nil, fmt.Errorf("unknown mail provider")
+	}
 }

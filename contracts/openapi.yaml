@@ -1,15 +1,16 @@
 openapi: 3.1.1
 info:
   title: Holoraa API
-  version: 0.1.0
-  summary: HTTP API for Holoraa. Foundation endpoints only.
+  version: 0.2.0
+  summary: HTTP API for Holoraa. Foundation endpoints and sign-in with email codes.
   description: |
     Source of truth for the HTTP API (AGENTS.md, "Contracts and generated code").
-    Only the foundation endpoints are defined here: liveness and readiness.
-    Feature endpoints are added at their milestones.
+    Defined here: liveness and readiness, email one-time code sign-in, server
+    sessions, and profiles. Other feature endpoints are added at their milestones.
 
     Every error response uses RFC 9457 Problem Details. Internal error detail is
-    never returned to clients.
+    never returned to clients. Sign-in responses do not reveal whether an account
+    exists (ADR 0009).
 servers:
   - url: http://127.0.0.1:8080
     description: Local development. The address comes from HOLORAA_HTTP_ADDR.
@@ -50,7 +51,225 @@ paths:
                 $ref: "#/components/schemas/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/auth/otp:
+    post:
+      operationId: sendSignInCode
+      summary: Send a sign-in code
+      description: |
+        Emails a six-digit code to the address. The response is the same for
+        known and unknown addresses. Requires an allowed Origin header.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendCodeRequest"
+      responses:
+        "202":
+          description: The code was sent, or the request was accepted without revealing the account state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendCodeAccepted"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "415":
+          $ref: "#/components/responses/Problem"
+        "429":
+          description: A send limit was reached. Retry-After gives the wait in seconds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: The code could not be delivered. Nothing was recorded.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/auth/otp/verify:
+    post:
+      operationId: verifySignInCode
+      summary: Verify a sign-in code
+      description: |
+        Checks the code once. On success, creates or finds the account, starts a
+        new session, and sets the session cookie. Any session the request carries
+        is revoked. Every failure is the same generic 401.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyCodeRequest"
+      responses:
+        "200":
+          description: Signed in. The session cookie is set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          description: The code is invalid, expired, already used, or locked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "415":
+          $ref: "#/components/responses/Problem"
+        "429":
+          description: Too many failed attempts from this client. Retry-After gives the wait in seconds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/auth/session:
+    get:
+      operationId: getCurrentSession
+      summary: Current session
+      description: Returns the signed-in user and the CSRF token for this session.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The session is valid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentSessionResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/auth/logout:
+    post:
+      operationId: signOut
+      summary: Sign out
+      description: Revokes the current session and clears the cookie.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: The session is revoked.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me:
+    get:
+      operationId: getMyProfile
+      summary: Own profile
+      description: Returns the signed-in user's profile, including the email address.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The caller's profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateMyProfile
+      summary: Update own profile
+      description: |
+        Partial update. Absent fields are unchanged. A null bio or avatar clears
+        it. Username and display name cannot be cleared. The user is always the
+        signed-in user; no user ID is accepted.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: The updated profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "409":
+          description: The username is already taken.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/users/{username}:
+    get:
+      operationId: getPublicProfile
+      summary: Public profile
+      description: Returns a user's public profile. The email address is never included.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The username, case-insensitive.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 32
+      responses:
+        "200":
+          description: The public profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-holoraa_session
+      description: |
+        The server-side session cookie (HttpOnly, Secure, SameSite=Lax). Local
+        development over plain HTTP uses the name holoraa_session without the
+        __Host- prefix (HOLORAA_COOKIE_SECURE=false).
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: The token returned by GET /v1/auth/session. Required on state-changing requests.
   responses:
     Problem:
       description: An error, described with RFC 9457 Problem Details.
@@ -78,6 +297,121 @@ components:
         database:
           type: string
           const: ok
+    Email:
+      type: string
+      minLength: 3
+      maxLength: 254
+      description: An email address. The server trims it and lowercases it.
+    SendCodeRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          $ref: "#/components/schemas/Email"
+    SendCodeAccepted:
+      type: object
+      additionalProperties: false
+      required: [challengeId]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+          description: Identifies the challenge. Send it with the code to verify.
+    VerifyCodeRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, code]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: Six digits.
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, username, displayName, bio, avatarUrl, profileComplete]
+      description: The signed-in user's own profile.
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          $ref: "#/components/schemas/Email"
+        username:
+          type: [string, "null"]
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+          description: Null until profile setup.
+        displayName:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 64
+        bio:
+          type: [string, "null"]
+          maxLength: 300
+        avatarUrl:
+          type: [string, "null"]
+          maxLength: 2048
+        profileComplete:
+          type: boolean
+          description: True once a username is set.
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+    CurrentSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [user, csrfToken]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        csrfToken:
+          type: string
+          minLength: 1
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      description: Every field is optional. Send only the fields to change.
+      properties:
+        username:
+          type: string
+          pattern: "^[A-Za-z][A-Za-z0-9_]{2,31}$"
+          description: Case is folded to lowercase. Must be unique.
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        bio:
+          type: [string, "null"]
+          maxLength: 300
+        avatarUrl:
+          type: [string, "null"]
+          maxLength: 2048
+          description: An https URL. Null clears it.
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      required: [id, username, displayName, bio, avatarUrl]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+        displayName:
+          type: [string, "null"]
+        bio:
+          type: [string, "null"]
+        avatarUrl:
+          type: [string, "null"]
     Problem:
       type: object
       description: RFC 9457 Problem Details. Internal detail is never included.

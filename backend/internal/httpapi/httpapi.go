@@ -20,8 +20,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Cholan-kinnera/holoraa/backend/internal/auth"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/problem"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
 )
 
 // RequestIDHeader carries the request ID in and out of the API.
@@ -34,10 +36,14 @@ var validRequestID = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
 
 type ctxKey struct{}
 
-// Deps are the collaborators the router needs.
+// Deps are the collaborators the router needs. Auth and Profiles are optional:
+// when Auth is nil, the sign-in and profile routes are not registered.
 type Deps struct {
-	Log    *slog.Logger
-	Health *health.Handler
+	Log      *slog.Logger
+	Health   *health.Handler
+	Auth     *auth.Service
+	Profiles *profile.Repo
+	Security Security
 }
 
 // NewRouter returns the API handler.
@@ -59,6 +65,10 @@ func NewRouter(d Deps) http.Handler {
 	r.Route("/v1", func(v1 chi.Router) {
 		v1.Get("/health", d.Health.Live)
 		v1.Get("/ready", d.Health.Ready)
+		if d.Auth != nil && d.Profiles != nil {
+			d.registerAuthRoutes(v1)
+			d.registerProfileRoutes(v1)
+		}
 	})
 	return r
 }
