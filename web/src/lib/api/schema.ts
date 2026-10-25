@@ -44,6 +44,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a sign-in code
+         * @description Emails a six-digit code to the address. The response is the same for
+         *     known and unknown addresses. Requires an allowed Origin header.
+         */
+        post: operations["sendSignInCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a sign-in code
+         * @description Checks the code once. On success, creates or finds the account, starts a
+         *     new session, and sets the session cookie. Any session the request carries
+         *     is revoked. Every failure is the same generic 401.
+         */
+        post: operations["verifySignInCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current session
+         * @description Returns the signed-in user and the CSRF token for this session.
+         */
+        get: operations["getCurrentSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Revokes the current session and clears the cookie.
+         */
+        post: operations["signOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own profile
+         * @description Returns the signed-in user's profile, including the email address.
+         */
+        get: operations["getMyProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update own profile
+         * @description Partial update. Absent fields are unchanged. A null bio or avatar clears
+         *     it. Username and display name cannot be cleared. The user is always the
+         *     signed-in user; no user ID is accepted.
+         */
+        patch: operations["updateMyProfile"];
+        trace?: never;
+    };
+    "/v1/users/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public profile
+         * @description Returns a user's public profile. The email address is never included.
+         */
+        get: operations["getPublicProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -57,6 +186,61 @@ export interface components {
             status: "ready";
             /** @constant */
             database: "ok";
+        };
+        /** @description An email address. The server trims it and lowercases it. */
+        Email: string;
+        SendCodeRequest: {
+            email: components["schemas"]["Email"];
+        };
+        SendCodeAccepted: {
+            /**
+             * Format: uuid
+             * @description Identifies the challenge. Send it with the code to verify.
+             */
+            challengeId: string;
+        };
+        VerifyCodeRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            /** @description Six digits. */
+            code: string;
+        };
+        /** @description The signed-in user's own profile. */
+        User: {
+            /** Format: uuid */
+            id: string;
+            email: components["schemas"]["Email"];
+            /** @description Null until profile setup. */
+            username: string | null;
+            displayName: string | null;
+            bio: string | null;
+            avatarUrl: string | null;
+            /** @description True once a username is set. */
+            profileComplete: boolean;
+        };
+        UserResponse: {
+            user: components["schemas"]["User"];
+        };
+        CurrentSessionResponse: {
+            user: components["schemas"]["User"];
+            csrfToken: string;
+        };
+        /** @description Every field is optional. Send only the fields to change. */
+        ProfileUpdate: {
+            /** @description Case is folded to lowercase. Must be unique. */
+            username?: string;
+            displayName?: string;
+            bio?: string | null;
+            /** @description An https URL. Null clears it. */
+            avatarUrl?: string | null;
+        };
+        PublicProfile: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            displayName: string | null;
+            bio: string | null;
+            avatarUrl: string | null;
         };
         /** @description RFC 9457 Problem Details. Internal detail is never included. */
         Problem: {
@@ -140,6 +324,227 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            default: components["responses"]["Problem"];
+        };
+    };
+    sendSignInCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description The code was sent, or the request was accepted without revealing the account state. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendCodeAccepted"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            415: components["responses"]["Problem"];
+            /** @description A send limit was reached. Retry-After gives the wait in seconds. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The code could not be delivered. Nothing was recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    verifySignInCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in. The session cookie is set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            /** @description The code is invalid, expired, already used, or locked. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            403: components["responses"]["Problem"];
+            415: components["responses"]["Problem"];
+            /** @description Too many failed attempts from this client. Retry-After gives the wait in seconds. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getCurrentSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is valid. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentSessionResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    signOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            /** @description The username is already taken. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            415: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getPublicProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The username, case-insensitive. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The public profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProfile"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             default: components["responses"]["Problem"];
         };
     };

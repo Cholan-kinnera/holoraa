@@ -9,8 +9,24 @@ import (
 
 // fakeEnv returns a getenv backed by a map. Tests supply configuration this
 // way, so no real environment or .env file is read.
+//
+// Auth settings that every test needs are supplied from a base set. A test
+// overrides any of them by setting the key, even to an empty string.
 func fakeEnv(values map[string]string) func(string) string {
-	return func(k string) string { return values[k] }
+	return func(k string) string {
+		if v, ok := values[k]; ok {
+			return v
+		}
+		return baseEnv[k]
+	}
+}
+
+// baseEnv holds valid values for settings that are not the subject of a test.
+// The secret is a placeholder for tests only. It is never a real credential.
+var baseEnv = map[string]string{
+	EnvEnv:            EnvDevelopment,
+	EnvAuthSecret:     "test-only-auth-secret-0123456789abcdef-placeholder",
+	EnvAllowedOrigins: "http://127.0.0.1:3000",
 }
 
 const validDSN = "postgres://holoraa:test-only-placeholder@127.0.0.1:5433/holoraa_dev?sslmode=disable"

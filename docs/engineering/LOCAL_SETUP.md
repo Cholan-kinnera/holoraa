@@ -138,3 +138,16 @@ The integration tests create and drop their own scratch databases (`holoraa_test
 | Status page against the live API | five states rendered correctly (see TESTING.md, section 6) |
 
 Not yet run: Node 24 (the declared target), and a fresh clone of the final branch. Both are listed in ADR 0008 under verification gaps.
+
+
+## 4. Sign-in in development
+
+`make dev-env` adds the local-development settings an existing `.env` lacks: `HOLORAA_AUTH_SECRET`, `HOLORAA_ENV=development`, and `HOLORAA_COOKIE_SECURE=false`. It never changes a value that is already set. Production never uses this script. The settings are:
+
+- `HOLORAA_ENV=development`. The default is `production`, which fails closed. A missing `HOLORAA_ENV` therefore refuses to start with the fake mail provider.
+- `HOLORAA_COOKIE_SECURE=false`. Browsers over plain HTTP do not keep a Secure cookie.
+- `HOLORAA_MAIL_PROVIDER=fake` (the default). No email is sent. The sign-in code is written to a private file in `.local/mail/` (mode 0600, git-ignored). Read the newest file there to get the code.
+
+Production must set `HOLORAA_ENV=production`, `HOLORAA_MAIL_PROVIDER=resend`, `HOLORAA_MAIL_FROM`, and `HOLORAA_RESEND_API_KEY`, and must leave `HOLORAA_COOKIE_SECURE` at `true`. The server refuses to start in production with the fake provider or insecure cookies, and the tests in `internal/config` and `internal/app` check this.
+
+Database-backed auth and profile tests run under `make test-db`. They skip, and say so, when `HOLORAA_TEST_DATABASE_URL` is not set.

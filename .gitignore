@@ -31,3 +31,6 @@ web/next-env.d.ts
 .vscode/
 *.swp
 *~
+
+# Local-only data: mail outbox and scratch files. Never committed.
+.local/
