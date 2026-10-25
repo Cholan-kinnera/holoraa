@@ -24,6 +24,17 @@ API_PID=""
 WEB_PID=""
 failures=0
 
+# Refuse to run if the ports are already in use. A leftover process would
+# answer for the API or web server and make the checks pass or fail for the
+# wrong reason.
+api_port="$(printf '%s' "${HOLORAA_HTTP_ADDR:-127.0.0.1:8080}" | sed 's/.*://')"
+for port in "$api_port" "$WEB_PORT"; do
+  if ss -ltn | awk '{print $4}' | grep -qE "[:.]$port\$"; then
+    echo "port $port is already in use; stop the process holding it, then retry" >&2
+    exit 2
+  fi
+done
+
 cleanup() {
   [ -n "$WEB_PID" ] && kill -TERM "$WEB_PID" 2>/dev/null
   [ -n "$API_PID" ] && kill -TERM "$API_PID" 2>/dev/null
@@ -102,18 +113,65 @@ start_web ""
 expect "E API URL not set" "Not configured|Not checked|"
 stop_web
 
-# Security headers on the page.
+# Security headers, Content-Security-Policy and nonces on the page. These need
+# the API running, so it is started again here.
+start_api
 start_web "$HOLORAA_API_URL"
-headers="$(curl -s -D - -o /dev/null --max-time 10 "http://127.0.0.1:$WEB_PORT/")"
+hdr_file="$(mktemp)"
+html_file="$(mktemp)"
+curl -s -D "$hdr_file" -o "$html_file" --max-time 10 "http://127.0.0.1:$WEB_PORT/"
+headers="$(tr -d '\r' < "$hdr_file")"
 for h in "x-content-type-options: nosniff" "referrer-policy: no-referrer" "x-frame-options: DENY"; do
-  if printf '%s' "$headers" | tr -d '\r' | grep -qi "^$h\$"; then
+  if printf '%s\n' "$headers" | grep -qi "^$h\$"; then
     echo "PASS header: $h"
   else
     echo "FAIL header missing: $h"
     failures=$((failures + 1))
   fi
 done
+
+csp="$(printf '%s\n' "$headers" | grep -i '^content-security-policy:' | cut -d' ' -f2-)"
+nonce="$(printf '%s' "$csp" | grep -oE "'nonce-[^']+'" | head -1 | sed "s/'nonce-//; s/'//")"
+if [ -n "$nonce" ] && printf '%s' "$csp" | grep -q "script-src 'self' 'nonce-" \
+   && ! printf '%s' "$csp" | grep -q "unsafe-inline" \
+   && ! printf '%s' "$csp" | grep -q "unsafe-eval"; then
+  echo "PASS CSP: nonce-based, no unsafe-inline or unsafe-eval"
+else
+  echo "FAIL CSP: missing nonce or contains unsafe sources"
+  failures=$((failures + 1))
+fi
+
+scripts_total=$(grep -o '<script' "$html_file" | wc -l)
+scripts_nonced=$(grep -o "<script[^>]*nonce=\"$nonce\"" "$html_file" | wc -l)
+if [ "$scripts_total" -gt 0 ] && [ "$scripts_total" -eq "$scripts_nonced" ]; then
+  echo "PASS nonces: all $scripts_total script tags carry the request nonce"
+else
+  echo "FAIL nonces: $scripts_nonced of $scripts_total script tags carry the request nonce"
+  failures=$((failures + 1))
+fi
+rm -f "$hdr_file" "$html_file"
+
+# Real browser: the page must render the states and log no CSP violation.
+browser="${HOLORAA_E2E_BROWSER:-google-chrome-stable}"
+if command -v "$browser" >/dev/null 2>&1; then
+  profile="$(mktemp -d)"
+  timeout 90 "$browser" --headless=new --disable-gpu --no-first-run --user-data-dir="$profile" \
+    --enable-logging=stderr --v=0 --virtual-time-budget=8000 --dump-dom \
+    "http://127.0.0.1:$WEB_PORT/" > "$profile/dom.html" 2> "$profile/console.log"
+  rendered="$(grep -oE 'class="state">[^<]*' "$profile/dom.html" | sed 's/class="state">//' | tr '\n' '|')"
+  violations="$(grep -ci 'Content Security Policy' "$profile/console.log")"
+  if [ "$rendered" = "Working|Working|" ] && [ "$violations" -eq 0 ]; then
+    echo "PASS browser: rendered '$rendered' with 0 CSP violations"
+  else
+    echo "FAIL browser: rendered '$rendered', CSP violations $violations"
+    failures=$((failures + 1))
+  fi
+  rm -rf "$profile"
+else
+  echo "SKIP browser: '$browser' not found (set HOLORAA_E2E_BROWSER to run the browser check)"
+fi
 stop_web
+stop_api
 
 if [ "$failures" -eq 0 ]; then
   echo "e2e-status: all checks passed"
