@@ -4,7 +4,7 @@
 - **Owner:** TODO(owner): Lead Software Architect
 - **Status:** Draft for owner review. Governed by [AGENTS.md](../../AGENTS.md) and [ADR 0007](../adr/0007-go-modular-monolith-foundation-v2.md) (Proposed).
 - **Last Updated:** 2026-10-25
-- **Implemented vs Proposed:** Only the M0 backend skeleton exists (`backend/cmd/api`, `backend/internal/version`). Everything else on this page is planned.
+- **Implemented vs Proposed:** The foundation skeleton exists: backend health and readiness, configuration, logging, migrations, the OpenAPI contract, and the status page. Sections 5 and 6 and the feature packages are planned. Tooling versions are in [ADR 0008](../adr/0008-foundation-skeleton-tooling.md).
 
 ---
 
@@ -31,15 +31,17 @@ Solid lines are planned for the foundation. Dotted lines are deferred and need a
 
 Planned backend packages (each created at the milestone that needs it):
 
-| Package | Milestone | Responsibility |
-|---|---|---|
-| `internal/version` | M0 (exists) | Build version reported by the binary |
-| `internal/config` | M1 | Configuration from environment variables only |
-| `internal/logging` | M1 | Structured logs with redaction |
-| `internal/health` | M2 | Liveness and readiness handlers |
-| `internal/store` | M2–M3 | PostgreSQL pool, goose migrations, sqlc output |
-| `internal/httpapi` | M2 | Router, middleware, RFC 9457 errors |
-| `internal/realtime` | M6 | WebSocket endpoint, origin check, ping/pong |
+| Package | Milestone | Status | Responsibility |
+|---|---|---|---|
+| `internal/version` | M0 | Implemented | Build version reported by the binary |
+| `internal/config` | M1 | Implemented | Configuration from environment variables only |
+| `internal/logging` | M1 | Implemented | Structured logs with redaction |
+| `internal/problem` | M2 | Implemented | RFC 9457 Problem Details |
+| `internal/health` | M2 | Implemented | Liveness and readiness handlers |
+| `internal/store` | M2 | Implemented | PostgreSQL pool and goose migrations. sqlc output comes at M3. |
+| `internal/httpapi` | M2 | Implemented | Router and request middleware |
+| `internal/app` | M2 | Implemented | Server startup and graceful shutdown |
+| `internal/realtime` | M6 | Planned | WebSocket endpoint, origin check, ping/pong |
 
 Feature packages (messaging, communities, calls) are not planned here. They wait for the approvals listed in section 6.
 

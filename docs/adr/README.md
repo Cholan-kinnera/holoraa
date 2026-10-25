@@ -13,6 +13,7 @@ Use [0000-template.md](0000-template.md) for new records. **Status is set by the
 | [0005](0005-livekit-webrtc-media-engine.md) | LiveKit for calls and screen sharing | Accepted (legacy); deferred for v2. **Owner to confirm.** | Calls are deferred. |
 | [0006](0006-redis-presence-and-pubsub.md) | Redis for presence and pub/sub | Accepted; amended 2026-10-23 (implementation deferred) | Redis not in the foundation. |
 | [0007](0007-go-modular-monolith-foundation-v2.md) | Go modular monolith foundation (v2) | **Proposed.** Acceptance is decision D10. | The v2 backend and foundation decisions. |
+| [0008](0008-foundation-skeleton-tooling.md) | Tooling and versions for the foundation skeleton | **Proposed.** Owner acceptance pending. | Exact versions and their checks: chi, pgx, goose, Next.js, TypeScript, ESLint, and the contract tools. Records the ESLint lifecycle question. |
 
 ## Gaps and notes
 

@@ -4,9 +4,9 @@
 - **Owner:** TODO(owner): Tech Lead
 - **Status:** Draft for owner review.
 - **Last Updated:** 2026-10-25
-- **Implemented vs Proposed:** Only Go 1.27.3 is in use, and only in the M0 skeleton. No other version is pinned.
+- **Implemented vs Proposed:** The foundation skeleton is implemented (milestones M1, M2, M4 and M5, activated by the owner). Versions are pinned in `backend/go.mod` and `web/package.json` as **proposals** under [ADR 0008](../adr/0008-foundation-skeleton-tooling.md), which is not yet accepted.
 
-**Rule:** a version is recorded here only after it has been verified and the milestone that needs it has been approved (AGENTS.md, "Architecture"). The legacy `TECH_STACK.md` listed versions that were never verified for v2. They are not carried forward.
+**Rule:** a version is pinned only after it has been verified and its milestone has been approved (AGENTS.md, "Architecture"). Each version in ADR 0008 lists what was checked. The legacy `TECH_STACK.md` listed versions that were never verified for v2. They are not carried forward.
 
 ---
 
@@ -72,4 +72,6 @@ NestJS, Prisma, Zod (as a foundation dependency), Socket.io, Turborepo, pnpm wor
 
 ## Verification status
 
-No version in this document has been verified for v2 yet. Before a version is pinned, verify it against its official source and record the check in the milestone's gate output.
+Versions pinned in code, with the checks behind them, are listed in [ADR 0008](../adr/0008-foundation-skeleton-tooling.md). Two gaps remain:
+- The web checks ran on Node 26.11.1. Node 24 is the declared target and has not been run here.
+- PostgreSQL 17 is provisional under D4 and has not been confirmed against official support status.

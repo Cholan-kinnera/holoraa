@@ -4,7 +4,7 @@
 - **Owner:** TODO(owner): Quality Lead
 - **Status:** Draft for owner review.
 - **Last Updated:** 2026-10-25
-- **Implemented vs Proposed:** The Go checks in section 2 run today through `make check`. The web checks and the contract checks are planned for M4 and M5.
+- **Implemented vs Proposed:** The Go checks, the PostgreSQL integration tests, the web checks, and the contract checks all run today. See section 9 for the full list and the commands.
 
 ---
 
@@ -27,36 +27,33 @@
 
 Tests use the standard `testing` package. Test files sit beside the code they test (`*_test.go`).
 
-## 3. Backend integration (from M2)
+## 3. Backend integration (implemented)
 
-- Tests run against a real PostgreSQL 17 instance (version confirmed under D4).
-- Each test creates and drops its own database or schema. Tests never depend on existing data.
-- Configuration comes from test fixtures or environment variables. No local `.env` is required.
-- The unreachable-database path for readiness is tested with a DSN that points nowhere, not by stopping containers.
+- Tests run against a real PostgreSQL 17 instance (`make test-db`, which uses the isolated development container).
+- Each migration test creates and drops its own scratch database (`holoraa_test_*`).
+- Configuration comes from test fixtures, not from a `.env` file.
+- The unreachable-database path for readiness uses a real pool pointed at a closed port, not a stopped container.
+- Tests that need PostgreSQL skip with a message when `HOLORAA_TEST_DATABASE_URL` is not set. `make test-db` sets it. CI must run `make test-db`, not `make check` alone, so the database tests cannot be skipped silently.
 
-## 4. Migrations (from M2)
+## 4. Migrations (implemented)
 
-- `goose up` from an empty database succeeds.
-- `goose down` followed by `goose up` succeeds, as the M2 gate requires.
-- `goose status` is clean after both.
+- Migrations apply from an empty database (`TestIntegrationMigrationRoundTrip`).
+- `down` followed by `up` succeeds, as the M2 gate requires.
+- `status` is clean after the round trip.
 
 `TODO(owner): the M2 gate requires down-migrations to work in tests, while the deployment policy in DEPLOYMENT.md says production never uses down-migrations. Confirm both rules together.`
 
-## 5. Contracts (from M4)
+## 5. Contracts (implemented: lint and drift)
 
-- The OpenAPI 3.1.1 document and the JSON Schema realtime events validate in CI.
-- Regenerating clients and server code produces no diff. CI fails if it does.
-- Generators and validators are pinned to exact versions after the spike (D9).
+- `contracts/openapi.yaml` (OpenAPI 3.1.1) is linted with Redocly CLI. Errors fail the check; the three current warnings are listed in ADR 0008.
+- `make contract-check` regenerates the TypeScript client into a temporary file and compares it byte for byte with the committed `web/src/lib/api/schema.ts`. A difference fails the check. Tested by changing the file and confirming a non-zero exit.
+- Not yet implemented: JSON Schema for realtime events (M6), and a Go conformance test that compares handler output with the contract. Handler output is checked by Go tests and by the typed web client, not by a contract test.
 
-## 6. Web (from M5)
+## 6. Web (implemented)
 
-Checks run in CI and locally:
-- type checking,
-- linting,
-- production build,
-- end-to-end smoke test of the status page against a running backend.
-
-The tooling choices (package manager, runtime validation library, linter, and end-to-end framework) are open under D5. The legacy stack used Vitest and Playwright. That is not a decision for v2.
+- `npm run typecheck` (strict TypeScript), `npm run lint` (ESLint with the Next.js rules), `npm test` (Vitest, unit tests for the status logic and URL handling), and `npm run build` (production build).
+- The status page was checked end to end against the real API and database in five states: both up, database stopped, database restored, API stopped, and `HOLORAA_API_URL` unset. See LOCAL_SETUP.md.
+- No browser end-to-end framework is added yet. The choice is part of D5 and is open.
 
 ## 7. Coverage
 
@@ -65,6 +62,16 @@ Coverage thresholds are proposals and are not approved:
 - Other packages: `TODO(owner)`.
 
 Coverage is a signal, not a goal. Tests for behaviour matter more than the percentage.
+
+## 9. Command summary
+
+| Command | Runs | Database needed |
+|---|---|---|
+| `make check` | Go format, vet, race tests, build, version | No |
+| `make test-db` | All Go tests with PostgreSQL integration | Yes |
+| `make web-check` | Web typecheck, lint, unit tests, build | No |
+| `make contract-check` | OpenAPI lint and client drift check | No |
+| `make check-all` | All of the above | Yes |
 
 ## 8. Load testing (Phase 8)
 

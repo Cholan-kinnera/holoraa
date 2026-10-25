@@ -9,13 +9,13 @@ Holoraa is in early foundation work. **Nothing user-facing exists yet.**
 | Part | State |
 |---|---|
 | Governance and rules | Drafted. See [AGENTS.md](AGENTS.md) and [docs/adr/](docs/adr/README.md). |
-| Backend (Go) | M0 only: a version entry point. No server, no database. |
-| Web app | Not started (planned at M5). |
-| Database | Not started (planned at M2). |
-| Contracts | Not started (planned at M4). |
+| Backend (Go) | Health (`/v1/health`), readiness (`/v1/ready`, checks PostgreSQL), configuration, structured logs, and goose migrations. |
+| Database | Local PostgreSQL 17 in Docker, isolated from any other project. Baseline migration only; no tables yet. |
+| Contract | OpenAPI 3.1.1 in `contracts/`. Covers the two health endpoints. |
+| Web app | Status page (Next.js) showing the API and database state, using the generated client. |
 | Authentication, messaging, calls, feeds | Not started. Authentication and messaging need an owner-approved design first. |
 
-The milestones are in [docs/MILESTONE_GATES.md](docs/MILESTONE_GATES.md).
+The milestones are in [docs/MILESTONE_GATES.md](docs/MILESTONE_GATES.md). The tooling choices and their verification status are in [ADR 0008](docs/adr/0008-foundation-skeleton-tooling.md) (Proposed).
 
 ## Repository layout
 
@@ -23,22 +23,30 @@ The milestones are in [docs/MILESTONE_GATES.md](docs/MILESTONE_GATES.md).
 AGENTS.md              working rules for contributors and tools
 CONTRIBUTING.md        how to make a change
 docs/                  product, architecture, security, engineering, runbooks, ADRs
-backend/               Go module (cmd/, internal/)
-Makefile               make check, make build, make clean
+backend/               Go module: cmd/api, internal/, db/ (migrations)
+contracts/             OpenAPI 3.1.1 (source of truth for the HTTP API)
+web/                   Next.js + TypeScript status page
+infra/compose/         local PostgreSQL 17 (development only)
+scripts/               developer helpers (dev-env.sh)
+Makefile               make check, check-all, db-up, migrate-up, test-db, web-check, contract-check
 ```
 
-Planned: `contracts/` (OpenAPI and JSON Schema), `web/` (Next.js), `infra/compose/` (local PostgreSQL), and `backend/db/` (migrations and queries). They are added at their milestones.
+## Quick start
 
-## Quick start (works today)
-
-You need Go 1.27.3. Install it outside the repository. Then, from a clean clone:
+Full steps, prerequisites, and troubleshooting are in [docs/engineering/LOCAL_SETUP.md](docs/engineering/LOCAL_SETUP.md). The short version, from a clean clone, with Go 1.27.3 installed outside the repository and Docker running:
 
 ```bash
-make check GO=/path/to/go1.27.3/bin/go
-./bin/api -version
+make dev-env                                   # creates .env with a generated password
+make db-up migrate-up                          # PostgreSQL on 127.0.0.1:5433, then migrations
+make check-all GO=/path/to/go1.27.3/bin/go     # Go, database tests, web, contract
 ```
 
-`make check` runs formatting, static analysis, tests with the race detector, the build, and the version check. Expected: each step exits 0, and the last line is the version string.
+Run the skeleton:
+
+```bash
+set -a; . ./.env; set +a; ./bin/api serve      # API on 127.0.0.1:8080 (terminal 1)
+cd web && HOLORAA_API_URL=http://127.0.0.1:8080 npm run dev   # status page on 127.0.0.1:3000 (terminal 2)
+```
 
 ## Documentation
 

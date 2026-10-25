@@ -4,7 +4,7 @@
 - **Owner:** TODO(owner): Platform Lead
 - **Status:** Draft for owner review. Production hosting is not chosen.
 - **Last Updated:** 2026-10-25
-- **Implemented vs Proposed:** Local development is planned at M7 (Docker Compose with PostgreSQL only). No deployment exists.
+- **Implemented vs Proposed:** The local PostgreSQL container exists (Docker Compose, see [LOCAL_SETUP.md](LOCAL_SETUP.md)). CI and production hosting do not exist.
 
 ---
 
@@ -18,11 +18,12 @@
 
 Each environment needs its own database, its own credentials, and its own volumes. Local containers must not reuse legacy containers or volumes.
 
-## 2. Local infrastructure (M7)
+## 2. Local infrastructure (implemented for PostgreSQL)
 
-- Compose project name, volumes, and host port are set at M7. The port must not conflict with an existing service on the developer's machine.
-- The PostgreSQL image and version are confirmed under D4 before use.
-- Credentials are generated per developer. They come from the environment, not from a committed file.
+- Compose project `holoraa-v2`, container `holoraa-v2-postgres`, volume `holoraa_v2_postgres_data`, host port `127.0.0.1:5433`. These names were chosen so that no legacy container or volume is reused.
+- The image is `postgres:17-alpine`, provisional under D4 until the owner confirms it.
+- Credentials are generated per developer by `scripts/dev-env.sh` and written to `.env`. They are never printed, and `.env` is never committed.
+- Redis is not in the local setup, because nothing needs it (ADR 0006, amended).
 
 ## 3. Pipeline (planned, M7)
 

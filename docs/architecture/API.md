@@ -4,7 +4,7 @@
 - **Owner:** TODO(owner): API Platform Lead
 - **Status:** Draft for owner review.
 - **Last Updated:** 2026-10-25
-- **Implemented vs Proposed:** The contract is planned in `contracts/` (OpenAPI 3.1.1, milestone M4). Only the M0 binary exists. No HTTP endpoint is implemented yet.
+- **Implemented vs Proposed:** The contract is `contracts/openapi.yaml` (OpenAPI 3.1.1). Two endpoints are implemented: `GET /v1/health` and `GET /v1/ready`. Every other endpoint in this document is planned.
 
 ---
 
@@ -24,18 +24,20 @@ Every error response uses `Content-Type: application/problem+json` and the field
 
 ```json
 {
-  "type": "https://holoraa.app/errors/validation",
-  "title": "Validation failed",
-  "status": 422,
-  "detail": "One or more fields are invalid.",
-  "instance": "/v1/example"
+  "type": "about:blank",
+  "title": "Service Unavailable",
+  "status": 503,
+  "detail": "The database is not reachable.",
+  "instance": "/v1/ready"
 }
 ```
 
 Rules:
-- Internal error detail, stack traces, SQL, and driver messages are never returned to clients. Log them server-side with the request ID instead.
-- Validation errors may add an `errors` array with `field` and `message`. Limit its size.
-- The `type` URI namespace is `TODO(owner): confirm the domain that owns error type URIs`. The legacy draft used `holoraa.app`, which is not verified as owned for this purpose.
+- `type` is `about:blank` (RFC 9457, section 4.2.1) until the owner decides on a type URI namespace (`TODO(owner)`). The legacy draft used `holoraa.app`, which has not been verified as owned for this purpose.
+- `title` is the fixed status text. `detail` is a safe, fixed sentence written for the case.
+- `instance` is the request path only. It never includes the query string.
+- Internal error detail, stack traces, SQL, and driver messages are never returned to clients. They are logged server-side with the request ID, and driver messages are logged by type only.
+- Validation errors may add an `errors` array with `field` and `message`. Limit its size. No validation errors exist yet.
 
 ## 4. Input validation
 
@@ -73,12 +75,15 @@ Non-idempotent writes (for example, sending a message) accept an `Idempotency-Ke
 - Storage is PostgreSQL by default. Redis is deferred (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 - A repeated key with the same request returns the stored result. A repeated key with a different body returns a 422 Problem Details error.
 
-## 8. Health endpoints (foundation)
+## 8. Health endpoints (implemented)
 
 | Endpoint | Purpose | Success | Failure |
 |---|---|---|---|
-| `GET /v1/health` | Liveness. No dependencies. | 200 | Process not responding |
-| `GET /v1/ready` | Readiness. Checks PostgreSQL. | 200 | 503 Problem Details |
+| `GET /v1/health` | Liveness. No dependencies. Body `{"status":"ok"}`. | 200 | Process not responding |
+| `GET /v1/ready` | Readiness. Checks PostgreSQL within 2 seconds. Body `{"status":"ready","database":"ok"}`. | 200 | 503 Problem Details |
+
+Unknown routes return 404 and wrong methods return 405, both as Problem Details.
+Every response carries an `X-Request-Id` header. A valid client-supplied ID is kept, and an invalid one is replaced.
 
 ## 9. Authentication
 
