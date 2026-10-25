@@ -1,0 +1,19 @@
+# Code ownership for Holoraa (v2 layout).
+# Each line: a path pattern followed by one or more owners.
+# Later patterns take precedence over earlier ones.
+
+# Default owner.
+# TODO(owner): confirm the handle. The legacy value was the repository owner.
+*                                  @Cholan-kinnera
+
+# Rules, decisions, and security/privacy documents need explicit owner review.
+/AGENTS.md                         @Cholan-kinnera
+/GOVERNANCE.md                     @Cholan-kinnera
+/docs/adr/                         @Cholan-kinnera
+/docs/MILESTONE_GATES.md           @Cholan-kinnera
+/docs/security/                    @Cholan-kinnera
+/docs/product/                     @Cholan-kinnera
+
+# Contracts and the database schema change the public API and stored data.
+/contracts/                        @Cholan-kinnera
+/backend/db/                       @Cholan-kinnera
