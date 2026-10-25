@@ -54,12 +54,16 @@ func (d Deps) requireSession(next http.Handler) http.Handler {
 			return
 		}
 		sess, err := d.Auth.ValidateSession(r.Context(), cookie.Value)
-		if err != nil {
-			if !errors.Is(err, auth.ErrUnauthenticated) {
-				d.Log.ErrorContext(r.Context(), "validate session", "error", err.Error())
-			}
+		if errors.Is(err, auth.ErrUnauthenticated) {
 			d.clearSessionCookie(w)
 			d.writeProblem(w, r, http.StatusUnauthorized, "Sign in to continue.")
+			return
+		}
+		if err != nil {
+			// A database fault is not an invalid session. The cookie is kept, so a
+			// transient outage does not sign the user out.
+			d.Log.ErrorContext(r.Context(), "validate session", "error", err.Error())
+			d.writeProblem(w, r, http.StatusInternalServerError, "An internal error occurred.")
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), sessionCtxKey{}, sess)))

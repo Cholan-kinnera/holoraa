@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/Cholan-kinnera/holoraa/backend/internal/auth"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/mail"
@@ -57,6 +59,7 @@ func (m *memSender) lastCode(t *testing.T) string {
 }
 
 type authFixture struct {
+	pool *pgxpool.Pool
 	h    http.Handler
 	mail *memSender
 	logs *bytes.Buffer
@@ -77,7 +80,7 @@ func newAuthFixture(t *testing.T) authFixture {
 		Profiles: profile.NewRepo(pool),
 		Security: Security{CookieName: testCookieName, CookieSecure: true, AllowedOrigins: []string{testOrigin}},
 	})
-	return authFixture{h: h, mail: sender, logs: &logs, auth: svc}
+	return authFixture{pool: pool, h: h, mail: sender, logs: &logs, auth: svc}
 }
 
 // do sends a request. body is JSON text or empty. cookie is optional.
@@ -392,5 +395,20 @@ func TestLogsNeverContainCodesTokensOrEmails(t *testing.T) {
 	}
 	if strings.Contains(logText, testSecret) {
 		t.Fatal("the auth secret appears in the logs")
+	}
+}
+
+// A database fault during session lookup is a 500, and the cookie is kept.
+func TestDatabaseFaultDuringSessionCheckKeepsTheCookie(t *testing.T) {
+	f := newAuthFixture(t)
+	cookie := f.signIn(t, "outage@example.test")
+	f.pool.Close()
+
+	rec := f.do(http.MethodGet, "/v1/auth/session", "", nil, cookie)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	if cleared := strings.Join(rec.Header().Values("Set-Cookie"), "; "); strings.Contains(cleared, "Max-Age=0") {
+		t.Fatalf("the cookie was cleared during a database fault: %q", cleared)
 	}
 }
