@@ -85,8 +85,21 @@ Non-idempotent writes (for example, sending a message) accept an `Idempotency-Ke
 Unknown routes return 404 and wrong methods return 405, both as Problem Details.
 Every response carries an `X-Request-Id` header. A valid client-supplied ID is kept, and an invalid one is replaced.
 
-## 9. Authentication
+## 9. Authentication (slice 1, implemented)
 
-Not designed. Protected endpoints will fail closed (401 or 403, Problem Details) once the auth design is approved. Until then no endpoint is protected because none carries user data.
+Sign-in uses a six-digit email code, then a server-side session cookie. The design is in [AUTH_AND_PROFILES.md](AUTH_AND_PROFILES.md) and the decision in [ADR 0009](../adr/0009-authentication-and-sessions.md) (Proposed).
 
-`TODO(owner): authentication design, which decides the header or cookie scheme and the error codes.`
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /v1/auth/otp` | none; Origin required | Send a code. Same response for known and unknown addresses. |
+| `POST /v1/auth/otp/verify` | none; Origin required | Check the code once. Sets the session cookie. |
+| `GET /v1/auth/session` | session cookie | Current user and the CSRF token. |
+| `POST /v1/auth/logout` | session cookie, Origin, `X-CSRF-Token` | Revoke the session. |
+| `GET /v1/me`, `PATCH /v1/me` | session cookie (PATCH also needs Origin and `X-CSRF-Token`) | Own profile, including email. |
+| `GET /v1/users/{username}` | session cookie | Public profile, no email. |
+
+- The session cookie is `__Host-holoraa_session` (HttpOnly, Secure, SameSite=Lax, Path=/, no Domain). Local HTTP development uses `holoraa_session` with `HOLORAA_COOKIE_SECURE=false`.
+- A state-changing request needs an allowed `Origin`. Session-authenticated writes also need `X-CSRF-Token`.
+- Every protected route answers 401 when there is no valid session. Every failure is Problem Details.
+- Rate-limit responses are 429 with `Retry-After`. They depend only on the email string or the client address.
+- The contract is `contracts/openapi.yaml`. Conformance is checked by `httpapi/contract_test.go`.
