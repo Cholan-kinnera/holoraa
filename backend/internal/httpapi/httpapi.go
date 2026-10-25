@@ -44,6 +44,7 @@ type Deps struct {
 func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(securityHeaders)
+	r.Use(requestLimits(d.Log))
 	r.Use(requestID)
 	r.Use(accessLog(d.Log))
 	r.Use(recoverPanic(d.Log))
@@ -60,6 +61,44 @@ func NewRouter(d Deps) http.Handler {
 		v1.Get("/ready", d.Health.Ready)
 	})
 	return r
+}
+
+// Request size limits enforced by the application, so that the rejection is
+// Problem Details. The server's own limit (internal/app) is set higher, so
+// this middleware answers first for requests between the two limits.
+const (
+	maxRequestTargetLen   = 2048
+	maxRequestHeaderBytes = 16 << 10
+)
+
+// requestLimits rejects oversized request targets (414) and oversized header
+// sections (431) with Problem Details. Header size is measured as the sum of
+// names and values plus a small per-field overhead, which approximates the
+// bytes on the wire.
+func requestLimits(log *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if len(r.RequestURI) > maxRequestTargetLen {
+				writeProblem(w, r, log, http.StatusRequestURITooLong, "The request target is too long.")
+				return
+			}
+			if headerBytes(r.Header) > maxRequestHeaderBytes {
+				writeProblem(w, r, log, http.StatusRequestHeaderFieldsTooLarge, "The request headers are too large.")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func headerBytes(h http.Header) int {
+	n := 0
+	for name, values := range h {
+		for _, v := range values {
+			n += len(name) + len(v) + 4
+		}
+	}
+	return n
 }
 
 // securityHeaders sets defensive headers on every response, including errors.

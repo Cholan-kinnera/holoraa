@@ -109,6 +109,82 @@ func TestSecurityHeadersOnSuccessAndErrorResponses(t *testing.T) {
 	}
 }
 
+func TestOversizedHeadersReturnProblemDetails(t *testing.T) {
+	var logs bytes.Buffer
+	h := newTestRouter(t, stubPinger{}, &logs)
+
+	rec := serve(h, http.MethodGet, "/v1/health", map[string]string{
+		"X-Padding": strings.Repeat("a", maxRequestHeaderBytes+1),
+	})
+
+	if rec.Code != http.StatusRequestHeaderFieldsTooLarge {
+		t.Fatalf("status = %d, want 431", rec.Code)
+	}
+	assertProblem(t, rec, 431, "/v1/health")
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatal("security headers missing on the 431 response")
+	}
+}
+
+func TestHeadersAtTheLimitAreAccepted(t *testing.T) {
+	var logs bytes.Buffer
+	h := newTestRouter(t, stubPinger{}, &logs)
+
+	// Name "X-Padding" (9) + value + 4 must not exceed the limit.
+	value := strings.Repeat("a", maxRequestHeaderBytes-9-4)
+	rec := serve(h, http.MethodGet, "/v1/health", map[string]string{"X-Padding": value})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("headers at the limit: status = %d, want 200", rec.Code)
+	}
+}
+
+func TestOverlongRequestTargetReturnsProblemDetails(t *testing.T) {
+	var logs bytes.Buffer
+	h := newTestRouter(t, stubPinger{}, &logs)
+
+	target := "/v1/nope?q=" + strings.Repeat("a", maxRequestTargetLen)
+	rec := serve(h, http.MethodGet, target, nil)
+
+	if rec.Code != http.StatusRequestURITooLong {
+		t.Fatalf("status = %d, want 414", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "aaaaaaaa") {
+		t.Fatal("problem response echoed the request target")
+	}
+	assertProblem(t, rec, 414, "/v1/nope")
+}
+
+// TestOversizedHeadersThroughRealServer sends a header section above the
+// application limit through a real HTTP server with the production header
+// limit, so the rejection path is the one that runs in production.
+func TestOversizedHeadersThroughRealServer(t *testing.T) {
+	var logs bytes.Buffer
+	srv := httptest.NewUnstartedServer(newTestRouter(t, stubPinger{}, &logs))
+	srv.Config.MaxHeaderBytes = 64 << 10
+	srv.Start()
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/v1/health", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("X-Padding", strings.Repeat("a", 20<<10))
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusRequestHeaderFieldsTooLarge {
+		t.Fatalf("status = %d, want 431", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "application/problem+json" {
+		t.Fatalf("Content-Type = %q, want application/problem+json", ct)
+	}
+}
+
 func TestRequestIDIsGeneratedWhenAbsent(t *testing.T) {
 	var logs bytes.Buffer
 	h := newTestRouter(t, stubPinger{}, &logs)

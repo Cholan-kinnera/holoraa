@@ -23,7 +23,10 @@ const (
 	readTimeout       = 10 * time.Second
 	writeTimeout      = 10 * time.Second
 	idleTimeout       = 60 * time.Second
-	maxHeaderBytes    = 16 << 10
+	// The application enforces 16 KiB for headers with Problem Details (see
+	// httpapi). This server limit is higher, so only headers above 64 KiB reach
+	// net/http's own plain-text 431 response.
+	maxHeaderBytes = 64 << 10
 
 	readinessTimeout = 2 * time.Second
 	shutdownTimeout  = 10 * time.Second
