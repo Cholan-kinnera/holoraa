@@ -26,7 +26,7 @@ export VERSION
 MODULE  := github.com/Cholan-kinnera/holoraa/backend
 LDFLAGS := -X $(MODULE)/internal/version.Version=$(VERSION)
 
-.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db
+.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db web-install web-check contract-check check-all
 
 check: toolchain-check validate-version fmt-check vet test build
 	./bin/api -version
@@ -86,3 +86,18 @@ migrate-status: db-up
 # create and drop their own scratch databases on the development server.
 test-db: toolchain-check db-up
 	@set -a && . ./.env && set +a && export HOLORAA_TEST_DATABASE_URL="$$HOLORAA_DATABASE_URL" && cd backend && $(GO) test -race -count=1 ./...
+
+# Web app and contract. Installs from the committed lockfile only (npm ci).
+web-install:
+	cd web && npm ci
+
+web-check: web-install
+	cd web && npm run -s typecheck && npm run -s lint && npm run -s test && npm run -s build
+
+# The contract must lint, and regenerating the client must produce no diff.
+contract-check: web-install
+	cd web && npm run -s lint:contract
+	@tmp=$$(mktemp) && cd web && npx openapi-typescript ../contracts/openapi.yaml -o "$$tmp" && cmp -s "$$tmp" src/lib/api/schema.ts; rc=$$?; rm -f "$$tmp"; if [ $$rc -ne 0 ]; then echo "generated client is out of date: run npm run gen:api in web/ and commit the result"; fi; exit $$rc
+
+# Everything: Go gate, database-backed Go tests, web, and contract.
+check-all: check test-db web-check contract-check

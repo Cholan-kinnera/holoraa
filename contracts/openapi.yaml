@@ -1,0 +1,102 @@
+openapi: 3.1.1
+info:
+  title: Holoraa API
+  version: 0.1.0
+  summary: HTTP API for Holoraa. Foundation endpoints only.
+  description: |
+    Source of truth for the HTTP API (AGENTS.md, "Contracts and generated code").
+    Only the foundation endpoints are defined here: liveness and readiness.
+    Feature endpoints are added at their milestones.
+
+    Every error response uses RFC 9457 Problem Details. Internal error detail is
+    never returned to clients.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local development. The address comes from HOLORAA_HTTP_ADDR.
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: Liveness
+      description: Reports that the process is running. Does not check dependencies.
+      security: []
+      responses:
+        "200":
+          description: The process is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/ready:
+    get:
+      operationId: getReady
+      summary: Readiness
+      description: Reports whether the database answers within the server's timeout.
+      security: []
+      responses:
+        "200":
+          description: The service is ready and the database answered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+        "503":
+          description: The database is not reachable.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: An error, described with RFC 9457 Problem Details.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    LiveStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    ReadyStatus:
+      type: object
+      additionalProperties: false
+      required: [status, database]
+      properties:
+        status:
+          type: string
+          const: ready
+        database:
+          type: string
+          const: ok
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details. Internal detail is never included.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: A URI that identifies the problem type. about:blank when no specific type exists.
+        title:
+          type: string
+          description: A short, fixed summary of the problem type.
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail:
+          type: string
+          description: A safe, human-readable explanation for this occurrence.
+        instance:
+          type: string
+          description: The request path that produced the problem. Never includes the query string.

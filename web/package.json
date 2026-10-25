@@ -1,0 +1,38 @@
+{
+  "name": "@holoraa/web",
+  "version": "1.0.0",
+  "description": "Holoraa web app (status page)",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "gen:api": "openapi-typescript ../contracts/openapi.yaml -o src/lib/api/schema.ts",
+    "lint:contract": "redocly lint ../contracts/openapi.yaml"
+  },
+  "keywords": [],
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "openapi-fetch": "0.17.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.71.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.3",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

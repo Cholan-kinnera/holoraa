@@ -17,6 +17,14 @@ coverage.out
 *.tgz
 *.zip
 
+# Web: dependencies and build output. The generated API types in
+# web/src/lib/api/schema.ts are committed and are not listed here.
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+web/next-env.d.ts
+
 # Editor and OS files
 .DS_Store
 .idea/
