@@ -26,7 +26,7 @@ export VERSION
 MODULE  := github.com/Cholan-kinnera/holoraa/backend
 LDFLAGS := -X $(MODULE)/internal/version.Version=$(VERSION)
 
-.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status
+.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db
 
 check: toolchain-check validate-version fmt-check vet test build
 	./bin/api -version
@@ -71,3 +71,18 @@ db-down:
 
 db-status:
 	$(COMPOSE) ps
+
+# Migrations run through the API binary, reading HOLORAA_DATABASE_URL from .env.
+migrate-up: db-up
+	@set -a && . ./.env && set +a && cd backend && $(GO) run ./cmd/api migrate up
+
+migrate-down: db-up
+	@set -a && . ./.env && set +a && cd backend && $(GO) run ./cmd/api migrate down
+
+migrate-status: db-up
+	@set -a && . ./.env && set +a && cd backend && $(GO) run ./cmd/api migrate status
+
+# All Go tests, including the tests that need PostgreSQL. The integration tests
+# create and drop their own scratch databases on the development server.
+test-db: toolchain-check db-up
+	@set -a && . ./.env && set +a && export HOLORAA_TEST_DATABASE_URL="$$HOLORAA_DATABASE_URL" && cd backend && $(GO) test -race -count=1 ./...
