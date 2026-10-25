@@ -1,6 +1,6 @@
 # ADR 0009: Authentication and server-managed sessions
 
-- **Status:** Proposed. The owner gave the direction on 2026-10-25 and asked for the decisions below to be implemented. Only the owner sets the status; set it to Accepted after review.
+- **Status:** Accepted (2026-10-25). The owner accepted the decisions below after review of the implementation on `feat/auth-profiles`. The open items at the end of this record remain open.
 - **Date:** 2026-10-25
 - **Deciders:** Owner (solo maintainer)
 - **Consulted:** None beyond the owner.
@@ -36,7 +36,7 @@ Chosen option: **3, server-managed sessions**, with these rules.
 - Lifetime 10 minutes. Single use. Five wrong attempts lock the challenge.
 - Only an HMAC of the code, keyed by `HOLORAA_AUTH_SECRET` and bound to the challenge ID, is stored. The plain code is never stored or logged.
 - Resend cooldown 60 seconds per email. At most five sends per email per rolling hour.
-- IP-level limit: at most 20 sends per client IP per rolling hour, and at most 30 failed verifications per client IP per rolling 15 minutes. **These two IP numbers are proposed defaults for owner review. They are not yet approved.**
+- IP-level limit: at most 20 sends per client address per rolling hour, and at most 30 failed verifications per client address per rolling 15 minutes. The owner approved these defaults (D11). The client address is the connection's address. Forwarded headers are never read (see the open items).
 - The send response is the same for existing and unknown accounts, so it reveals nothing about account existence. Rate-limit responses (429) depend only on the email string or the client IP, never on whether an account exists.
 
 ### Sessions
@@ -49,7 +49,7 @@ Chosen option: **3, server-managed sessions**, with these rules.
 ### Cookies
 
 - Production: name `__Host-holoraa_session`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain` attribute.
-- Local development over plain HTTP: `HOLORAA_COOKIE_SECURE=false`, with the name `holoraa_session`. This is for local use only, and production must not set it.
+- Local development over plain HTTP: `HOLORAA_ENV=development` and `HOLORAA_COOKIE_SECURE=false`, with the name `holoraa_session`. Production refuses `HOLORAA_COOKIE_SECURE=false`.
 
 ### CSRF
 
@@ -74,9 +74,9 @@ Chosen option: **3, server-managed sessions**, with these rules.
 
 ## Open items (owner decisions)
 
-- Approve or amend the proposed IP limits (20 sends per hour, 30 failed verifications per 15 minutes).
-- Trusted-proxy setting and the production reverse-proxy topology.
-- Retention periods for expired challenges and sessions (proposed: challenges one day after expiry, sessions 30 days after expiry).
+- Trusted-proxy policy. Forwarded headers are not read. Until a validated trusted-proxy policy exists, a production deployment behind a reverse proxy shares one address across all users. This must be resolved before such a deployment (D11).
+- Production mail: the production setting refuses the fake provider, and `HOLORAA_MAIL_PROVIDER=resend` must be configured explicitly.
+- Retention periods (AUTH_AND_PROFILES.md section 11): challenges 24 hours after expiry, events 48 hours, sessions 30 days after absolute expiry. These are proposed and need owner input before retention is final.
 - Resend sender domain and the production `from` address.
 - Google OAuth client registration (slice 3).
 
