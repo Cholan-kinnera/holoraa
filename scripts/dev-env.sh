@@ -20,7 +20,11 @@ fi
 command -v openssl >/dev/null 2>&1 || { echo "openssl is required to generate the development password" >&2; exit 1; }
 
 password="$(openssl rand -hex 24)"
-port="5433"
+# The port comes from .env.example, the single place where it is configured.
+port="$(sed -n 's/^HOLORAA_DEV_DB_PORT=//p' .env.example)"
+case "$port" in
+  ''|*[!0-9]*) echo "HOLORAA_DEV_DB_PORT in .env.example must be a number" >&2; exit 1 ;;
+esac
 
 umask 077
 tmp="$(mktemp .env.tmp.XXXXXX)"
