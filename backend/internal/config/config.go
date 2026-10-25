@@ -16,6 +16,7 @@ import (
 
 // Environment variable names.
 const (
+	EnvEnv            = "HOLORAA_ENV"
 	EnvHTTPAddr       = "HOLORAA_HTTP_ADDR"
 	EnvLogLevel       = "HOLORAA_LOG_LEVEL"
 	EnvDatabaseURL    = "HOLORAA_DATABASE_URL"
@@ -30,6 +31,10 @@ const (
 
 // Defaults and limits.
 const (
+	// EnvProduction is the default. A missing HOLORAA_ENV fails closed.
+	EnvProduction  = "production"
+	EnvDevelopment = "development"
+
 	DefaultHTTPAddr      = "127.0.0.1:8080"
 	DefaultLogLevel      = "info"
 	DefaultMailProvider  = "fake"
@@ -64,6 +69,9 @@ type MailConfig struct {
 
 // Config is the validated runtime configuration.
 type Config struct {
+	// Env is production or development. Production refuses the fake mail
+	// provider and insecure cookies.
+	Env            string
 	HTTPAddr       string
 	LogLevel       slog.Level
 	DatabaseURL    string
@@ -90,6 +98,12 @@ func (e *Error) Error() string {
 // and a fake in tests.
 func Load(getenv func(string) string) (Config, error) {
 	var cfg Config
+
+	env, err := parseEnv(valueOr(getenv(EnvEnv), EnvProduction))
+	if err != nil {
+		return Config{}, &Error{Setting: EnvEnv, Reason: err.Error()}
+	}
+	cfg.Env = env
 
 	addr := valueOr(getenv(EnvHTTPAddr), DefaultHTTPAddr)
 	if err := validateAddr(addr); err != nil {
@@ -125,13 +139,16 @@ func Load(getenv func(string) string) (Config, error) {
 	if err != nil {
 		return Config{}, &Error{Setting: EnvCookieSecure, Reason: err.Error()}
 	}
+	if env == EnvProduction && !secure {
+		return Config{}, &Error{Setting: EnvCookieSecure, Reason: "must be true in production"}
+	}
 	cfg.CookieSecure = secure
 	cfg.CookieName = cookieNameLocal
 	if secure {
 		cfg.CookieName = cookieNameSecure
 	}
 
-	mail, err := loadMail(getenv)
+	mail, err := loadMail(env, getenv)
 	if err != nil {
 		return Config{}, err
 	}
@@ -140,11 +157,24 @@ func Load(getenv func(string) string) (Config, error) {
 	return cfg, nil
 }
 
-func loadMail(getenv func(string) string) (MailConfig, error) {
+// loadMail selects the email provider. In production an explicit, supported
+// provider is required and the fake provider is refused: a production process
+// must never silently drop sign-in codes into a local file.
+func loadMail(env string, getenv func(string) string) (MailConfig, error) {
 	var m MailConfig
-	m.Provider = valueOr(getenv(EnvMailProvider), DefaultMailProvider)
+	raw := strings.TrimSpace(getenv(EnvMailProvider))
+	if raw == "" {
+		if env == EnvProduction {
+			return MailConfig{}, &Error{Setting: EnvMailProvider, Reason: "is required in production; set resend"}
+		}
+		raw = DefaultMailProvider
+	}
+	m.Provider = raw
 	switch m.Provider {
 	case MailProviderFake:
+		if env == EnvProduction {
+			return MailConfig{}, &Error{Setting: EnvMailProvider, Reason: "fake is for development only; set resend in production"}
+		}
 		dir := valueOr(getenv(EnvMailOutboxDir), DefaultMailOutboxDir)
 		if len(dir) > maxOutboxDirLen {
 			return MailConfig{}, &Error{Setting: EnvMailOutboxDir, Reason: fmt.Sprintf("must be at most %d characters", maxOutboxDirLen)}
@@ -162,9 +192,18 @@ func loadMail(getenv func(string) string) (MailConfig, error) {
 		m.From = from
 		m.ResendAPIKey = key
 	default:
-		return MailConfig{}, &Error{Setting: EnvMailProvider, Reason: "must be fake or resend"}
+		return MailConfig{}, &Error{Setting: EnvMailProvider, Reason: "must be fake (development only) or resend"}
 	}
 	return m, nil
+}
+
+func parseEnv(s string) (string, error) {
+	switch s {
+	case EnvProduction, EnvDevelopment:
+		return s, nil
+	default:
+		return "", fmt.Errorf("must be production or development")
+	}
 }
 
 func valueOr(v, fallback string) string {

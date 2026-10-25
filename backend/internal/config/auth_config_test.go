@@ -159,3 +159,83 @@ func TestResendAcceptedWhenFullyConfigured(t *testing.T) {
 		t.Fatalf("Mail = %+v, want resend with the configured key", cfg.Mail)
 	}
 }
+
+// Production is the default. Each test below sets its own environment, so
+// none depends on the base set used by the other tests.
+func prodEnv(extra map[string]string) map[string]string {
+	env := map[string]string{
+		EnvDatabaseURL:    validDSNForAuth,
+		EnvEnv:            EnvProduction,
+		EnvAuthSecret:     "test-only-auth-secret-0123456789abcdef-placeholder",
+		EnvAllowedOrigins: "https://app.example.test",
+	}
+	for k, v := range extra {
+		env[k] = v
+	}
+	return env
+}
+
+func TestDefaultEnvironmentIsProductionAndFailsClosedOnMail(t *testing.T) {
+	// An empty HOLORAA_ENV means the default, which is production.
+	env := map[string]string{
+		EnvDatabaseURL:    validDSNForAuth,
+		EnvEnv:            "",
+		EnvAuthSecret:     "test-only-auth-secret-0123456789abcdef-placeholder",
+		EnvAllowedOrigins: "https://app.example.test",
+	}
+	_, err := Load(fakeEnv(env))
+	assertSetting(t, err, EnvMailProvider)
+}
+
+func TestProductionRequiresAnExplicitMailProvider(t *testing.T) {
+	_, err := Load(fakeEnv(prodEnv(nil)))
+	assertSetting(t, err, EnvMailProvider)
+}
+
+func TestProductionRefusesFakeMail(t *testing.T) {
+	_, err := Load(fakeEnv(prodEnv(map[string]string{EnvMailProvider: "fake"})))
+	assertSetting(t, err, EnvMailProvider)
+}
+
+func TestProductionRefusesInsecureCookies(t *testing.T) {
+	_, err := Load(fakeEnv(prodEnv(map[string]string{
+		EnvMailProvider: "resend",
+		EnvMailFrom:     "no-reply@example.test",
+		EnvResendAPIKey: "re_placeholder",
+		EnvCookieSecure: "false",
+	})))
+	assertSetting(t, err, EnvCookieSecure)
+}
+
+func TestProductionAcceptsResendWithSecureCookies(t *testing.T) {
+	cfg, err := Load(fakeEnv(prodEnv(map[string]string{
+		EnvMailProvider: "resend",
+		EnvMailFrom:     "no-reply@example.test",
+		EnvResendAPIKey: "re_placeholder",
+	})))
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if cfg.Env != EnvProduction || !cfg.CookieSecure || cfg.CookieName != "__Host-holoraa_session" {
+		t.Fatalf("production config = env %q, secure %v, name %q", cfg.Env, cfg.CookieSecure, cfg.CookieName)
+	}
+}
+
+func TestDevelopmentMayUseFakeMailAndInsecureCookies(t *testing.T) {
+	cfg, err := Load(fakeEnv(map[string]string{
+		EnvDatabaseURL:  validDSNForAuth,
+		EnvEnv:          EnvDevelopment,
+		EnvCookieSecure: "false",
+	}))
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if cfg.Mail.Provider != MailProviderFake || cfg.CookieSecure {
+		t.Fatalf("development config = mail %q, secure %v", cfg.Mail.Provider, cfg.CookieSecure)
+	}
+}
+
+func TestEnvironmentRejectsUnknownValues(t *testing.T) {
+	_, err := Load(fakeEnv(map[string]string{EnvDatabaseURL: validDSNForAuth, EnvEnv: "staging"}))
+	assertSetting(t, err, EnvEnv)
+}

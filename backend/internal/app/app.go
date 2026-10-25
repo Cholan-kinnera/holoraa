@@ -46,7 +46,7 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	sender, err := newSender(cfg.Mail)
+	sender, err := newSender(cfg)
 	if err != nil {
 		return err
 	}
@@ -99,14 +99,18 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	return nil
 }
 
-// newSender returns the configured email sender. The Resend adapter is used
-// only when the configuration selects it.
-func newSender(m config.MailConfig) (mail.Sender, error) {
-	switch m.Provider {
+// newSender returns the configured email sender. It refuses the fake provider
+// in production even when the configuration asks for it, so a production
+// process cannot silently drop sign-in codes into a local file.
+func newSender(cfg config.Config) (mail.Sender, error) {
+	switch cfg.Mail.Provider {
 	case config.MailProviderFake:
-		return mail.NewFake(m.OutboxDir), nil
+		if cfg.Env == config.EnvProduction {
+			return nil, fmt.Errorf("the fake mail provider is not allowed in production")
+		}
+		return mail.NewFake(cfg.Mail.OutboxDir), nil
 	case config.MailProviderResend:
-		return mail.NewResend(m.ResendAPIKey, m.From), nil
+		return mail.NewResend(cfg.Mail.ResendAPIKey, cfg.Mail.From), nil
 	default:
 		return nil, fmt.Errorf("unknown mail provider")
 	}

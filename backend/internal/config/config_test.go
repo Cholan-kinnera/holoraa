@@ -24,6 +24,7 @@ func fakeEnv(values map[string]string) func(string) string {
 // baseEnv holds valid values for settings that are not the subject of a test.
 // The secret is a placeholder for tests only. It is never a real credential.
 var baseEnv = map[string]string{
+	EnvEnv:            EnvDevelopment,
 	EnvAuthSecret:     "test-only-auth-secret-0123456789abcdef-placeholder",
 	EnvAllowedOrigins: "http://127.0.0.1:3000",
 }
