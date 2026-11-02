@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/room.approved.v1.json",
+  "title": "RoomApprovedEvent",
+  "description": "Realtime notification delivered to a knocking guest upon host approval. Contains a cryptographically signed, short-lived room admission token. Transport: Server-to-client over authenticated WebSocket. Visibility: Knocking guest only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "id", "data"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "room.approved"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUIDv7) for server-side deduplication."
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["knockId", "roomSlug", "approvedBy", "accessToken", "expiresAt"],
+      "properties": {
+        "knockId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "roomSlug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,31}$"
+        },
+        "approvedBy": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User ID of the approving host."
+        },
+        "accessToken": {
+          "type": "string",
+          "minLength": 32,
+          "description": "Short-lived cryptographically signed token presented to the media gateway to join the room stage."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiry timestamp for the room admission token (typically 60 seconds)."
+        }
+      }
+    }
+  }
+}

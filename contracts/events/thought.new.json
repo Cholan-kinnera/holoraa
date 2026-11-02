@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/thought.new.v1.json",
+  "title": "ThoughtNewEvent",
+  "description": "Realtime notification broadcast when an author publishes a new thought to The Spot. Transport: Server-to-client over authenticated WebSocket. Visibility: Followed connections and active mutual orbit subscribers who have not blocked the author.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "id", "data"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "thought.new"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUIDv7) matching the thought identifier."
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["thoughtId", "author", "text", "mood", "photoUrl", "createdAt"],
+      "properties": {
+        "thoughtId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "username", "displayName", "avatarUrl"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "username": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{2,31}$"
+            },
+            "displayName": {
+              "type": ["string", "null"],
+              "maxLength": 64
+            },
+            "avatarUrl": {
+              "type": ["string", "null"],
+              "maxLength": 2048
+            }
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280
+        },
+        "mood": {
+          "type": ["string", "null"],
+          "maxLength": 32
+        },
+        "photoUrl": {
+          "type": ["string", "null"],
+          "maxLength": 2048
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}
