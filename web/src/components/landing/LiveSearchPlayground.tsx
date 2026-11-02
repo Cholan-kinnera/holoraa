@@ -25,14 +25,14 @@ export function LiveSearchPlayground({
 }: LiveSearchPlaygroundProps) {
   const [query, setQuery] = useState('');
 
+  const [latencyMs, setLatencyMs] = useState('0.2');
+
   const trie = useMemo(() => buildUserSearchTrie(peopleDirectory), [peopleDirectory]);
 
-  const { results, latencyMs } = useMemo(() => {
-    const t0 = performance.now();
-    const matched = searchPeople(query, peopleDirectory, trie, currentUserId, socialGraph);
-    const elapsed = Math.max(0.1, performance.now() - t0).toFixed(1);
-    return { results: matched, latencyMs: elapsed };
-  }, [query, peopleDirectory, trie, currentUserId, socialGraph]);
+  const results = useMemo(
+    () => searchPeople(query, peopleDirectory, trie, currentUserId, socialGraph),
+    [query, peopleDirectory, trie, currentUserId, socialGraph]
+  );
 
   const myFollowing = socialGraph[currentUserId] || new Set<string>();
 
@@ -83,7 +83,12 @@ export function LiveSearchPlayground({
             id="landing-live-search"
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              const t0 = performance.now();
+              setQuery(e.target.value);
+              const elapsed = Math.max(0.1, performance.now() - t0).toFixed(1);
+              setLatencyMs(elapsed);
+            }}
             placeholder="Search people, @handles, thoughts, or vibes (e.g. 'film', 'coffee', 'kabir')..."
             className="w-full pl-11 pr-32 py-3.5 rounded-2xl bg-oled-black hairline-border text-sm text-white placeholder-ink-muted focus:outline-none focus:border-white/25 transition-all"
           />

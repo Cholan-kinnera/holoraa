@@ -35,10 +35,17 @@ export function CommandPaletteModal({
 
   const myFollowing = socialGraph[currentUserId] || new Set<string>();
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
     }
   }, [isOpen]);
 

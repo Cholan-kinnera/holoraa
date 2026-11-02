@@ -12,10 +12,7 @@ import {
   type SpaceData,
 } from '../lib/data/mock-data';
 import type { DirectoryUser, ThoughtRecord } from '../lib/dsa/search-graph';
-import {
-  computeOrbitRecommendations,
-  rankThoughts,
-} from '../lib/dsa/search-graph';
+import { rankThoughts } from '../lib/dsa/search-graph';
 import { FloatingNavbar } from './landing/FloatingNavbar';
 import { Hero3DStage } from './landing/Hero3DStage';
 import { LiveSearchPlayground } from './landing/LiveSearchPlayground';
@@ -40,7 +37,7 @@ export function HoloraaApp() {
   const [thoughts, setThoughts] = useState<ThoughtRecord[]>(INITIAL_THOUGHTS);
   const [people, setPeople] = useState<Record<string, DirectoryUser>>(INITIAL_PEOPLE_DIRECTORY);
   const [socialGraph, setSocialGraph] = useState<Record<string, Set<string>>>(INITIAL_SOCIAL_GRAPH);
-  const [spaces, setSpaces] = useState<Record<string, SpaceData>>(INITIAL_SPACES);
+  const [spaces] = useState<Record<string, SpaceData>>(INITIAL_SPACES);
   const [currentSpaceKey, setCurrentSpaceKey] = useState<string>('design');
   const [selfNote, setSelfNote] = useState<string>('✨ building');
 
@@ -98,12 +95,6 @@ export function HoloraaApp() {
   // Derived: Current following count
   const myFollowing = socialGraph['arjun'] ?? new Set<string>();
   const followingCount = myFollowing.size;
-
-  // Derived: Orbit recommendations
-  const orbitCandidates = useMemo(
-    () => computeOrbitRecommendations('arjun', socialGraph, people),
-    [socialGraph, people]
-  );
 
   // Derived: Ranked thoughts for The Spot
   const rankedThoughts = useMemo(() => {
