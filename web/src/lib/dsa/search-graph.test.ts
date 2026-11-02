@@ -129,9 +129,9 @@ describe('2-Hop BFS Mutual Connections & Orbit', () => {
   it('ranks orbit recommendations by mutual connection count', () => {
     const orbit = computeOrbitRecommendations('arjun', socialGraph, directory);
     // meera has 2 mutuals (aanya, rohan) and is not followed by arjun -> should be first candidate
-    expect(orbit[0].user.id).toBe('meera');
-    expect(orbit[0].mutuals.length).toBe(2);
-    expect(orbit[0].isFollowing).toBe(false);
+    expect(orbit[0]!.user.id).toBe('meera');
+    expect(orbit[0]!.mutuals.length).toBe(2);
+    expect(orbit[0]!.isFollowing).toBe(false);
   });
 });
 
@@ -170,11 +170,11 @@ describe('Search & Ranking', () => {
 
     const matchName = searchPeople('aanya', directory, trie, 'me', graph);
     expect(matchName.length).toBeGreaterThan(0);
-    expect(matchName[0].user.id).toBe('u1');
+    expect(matchName[0]!.user.id).toBe('u1');
 
     const matchVibe = searchPeople('synth', directory, trie, 'me', graph);
     expect(matchVibe.length).toBeGreaterThan(0);
-    expect(matchVibe[0].user.id).toBe('u2');
+    expect(matchVibe[0]!.user.id).toBe('u2');
   });
 
   it('ranks thoughts by Calm Gravity formula', () => {
@@ -207,10 +207,10 @@ describe('Search & Ranking', () => {
 
     const ranked = rankThoughts(thoughts, 'me', graph, 'foryou');
     // Fresh thought from followed friend decays much slower than 20-hour-old thought
-    expect(ranked[0].id).toBe('t_new_mutual');
+    expect(ranked[0]!.id).toBe('t_new_mutual');
 
     const mediaOnly = rankThoughts(thoughts, 'me', graph, 'media');
     expect(mediaOnly.length).toBe(1);
-    expect(mediaOnly[0].id).toBe('t_new_mutual');
+    expect(mediaOnly[0]!.id).toBe('t_new_mutual');
   });
 });

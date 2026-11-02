@@ -76,8 +76,7 @@ export class SearchPrefixTrie {
     if (!clean || !refId) return;
 
     let current = this.root;
-    for (let i = 0; i < clean.length; i++) {
-      const ch = clean[i];
+    for (const ch of clean) {
       let next = current.children.get(ch);
       if (!next) {
         next = new PrefixTrieNode();
@@ -93,8 +92,7 @@ export class SearchPrefixTrie {
     if (!clean) return new Set();
 
     let current = this.root;
-    for (let i = 0; i < clean.length; i++) {
-      const ch = clean[i];
+    for (const ch of clean) {
       const next = current.children.get(ch);
       if (!next) {
         return new Set();

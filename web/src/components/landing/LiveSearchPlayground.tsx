@@ -96,9 +96,10 @@ export function LiveSearchPlayground({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {results.slice(0, 4).map(({ user, mutuals }) => {
             const isFollowing = myFollowing.has(user.id);
+            const firstMutual = mutuals[0];
             const mutualText =
-              mutuals.length > 0
-                ? `Followed by ${mutuals[0].name.split(' ')[0]}${
+              firstMutual
+                ? `Followed by ${firstMutual.name.split(' ')[0] ?? ''}${
                     mutuals.length > 1 ? ` + ${mutuals.length - 1} mutuals` : ''
                   }`
                 : 'In your extended network';
