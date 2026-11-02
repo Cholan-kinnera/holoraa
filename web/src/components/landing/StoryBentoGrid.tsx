@@ -21,7 +21,7 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
             </span>
           </h2>
           <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
-            Everything you love about WhatsApp and Instagram Direct—instant photos, crisp read ticks,
+            Everything you love about direct conversations—instant photos, crisp read ticks,
             swipe-feel replies, and top status notes—on a calm pitch-black canvas.
           </p>
         </div>

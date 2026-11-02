@@ -48,8 +48,8 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
       </h1>
 
       <p className="hero-subhead mt-6 text-base sm:text-lg text-ink-secondary max-w-xl mx-auto font-normal leading-relaxed">
-        Private chats like WhatsApp. Thoughts & mutual discovery like Instagram. Voice lounges like
-        Discord. Pitch black, zero ads, no noise.
+        Private messaging, shared thoughts, quiet voice lounges, and personal rooms. Pitch black,
+        zero ads, no noise.
       </p>
 
       <div className="hero-actions mt-9 flex flex-wrap items-center justify-center gap-3">
