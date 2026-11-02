@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { BrandMark } from "@/components/ui/Brand";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
 const LINKS: ReadonlyArray<{ href: string; label: string }> = [
@@ -42,12 +43,7 @@ export function SiteHeader() {
   return (
     <header className="site-header glass">
       <Link href="/" className="brand" aria-label="Holoraa home">
-        <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-          <circle cx="16" cy="16" r="5" fill="currentColor" />
-          <circle cx="6" cy="9" r="2.5" fill="currentColor" opacity="0.6" />
-          <circle cx="26" cy="7" r="2.5" fill="currentColor" opacity="0.6" />
-          <path d="M16 16 L6 9 M16 16 L26 7" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-        </svg>
+        <BrandMark />
         Holoraa
       </Link>
 

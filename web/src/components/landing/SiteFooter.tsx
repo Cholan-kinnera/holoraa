@@ -1,11 +1,13 @@
 import Link from "next/link";
 
+import { BrandLogo } from "@/components/ui/Brand";
+
 export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer__inner">
         <div>
-          <p className="brand brand--footer">Holoraa</p>
+          <BrandLogo width={120} />
           <p className="faint">One simple place to talk and share. Early build.</p>
         </div>
         <nav aria-label="Footer">
