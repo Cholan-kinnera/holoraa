@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
 
-import { FinalCta } from "@/components/landing/FinalCta";
-import { Holories } from "@/components/landing/Holories";
-import { Hero } from "@/components/landing/Hero";
-import { Principles } from "@/components/landing/Principles";
-import { ProductPreview } from "@/components/landing/ProductPreview";
-import { SiteFooter } from "@/components/landing/SiteFooter";
-import { SiteHeader } from "@/components/landing/SiteHeader";
+import { HoloraaApp } from "@/components/HoloraaApp";
 import { MotionRoot } from "@/components/ui/MotionRoot";
 
 export const metadata: Metadata = {
-  title: "Talk, share, and hang out, simply",
+  title: "Holoraa — One quiet place for the people who matter",
   description: "One minimal social space to chat, hang out, and share. Private by default, with no ads and no feed built to hold your attention.",
 };
 
@@ -24,15 +18,7 @@ export default function LandingPage() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <SiteHeader />
-      <main id="main">
-        <Hero />
-        <ProductPreview />
-        <Principles />
-        <Holories />
-        <FinalCta />
-      </main>
-      <SiteFooter />
+      <HoloraaApp />
     </MotionRoot>
   );
 }

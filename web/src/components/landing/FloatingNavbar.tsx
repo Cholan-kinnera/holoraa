@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
-import { ArrowUpRight, Search } from '../ui/Icons';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpRight, Menu, Search, X } from '../ui/Icons';
+import { BrandLogo, BrandMark } from '../ui/Brand';
 
 interface FloatingNavbarProps {
   onOpenSearch: () => void;
@@ -9,52 +11,151 @@ interface FloatingNavbarProps {
 }
 
 export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   return (
-    <nav className="fixed top-0 inset-x-0 z-40 h-16 px-6 sm:px-12 flex items-center justify-between bg-black/65 backdrop-blur-xl hairline-b">
-      <div
-        className="flex items-center gap-2.5 cursor-pointer"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+    <header className="floating-navbar-container">
+      <nav
+        aria-label="Main Navigation"
+        className="floating-navbar"
       >
-        <div className="w-7 h-7 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm tracking-tighter">
-          h
+        <div
+          className="navbar-brand-group"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+        >
+          <BrandMark className="w-6 h-6" />
+          <BrandLogo className="text-base font-semibold tracking-tight text-white" />
         </div>
-        <span className="font-semibold text-base tracking-tight text-white">holoraa</span>
-      </div>
 
-      <div className="hidden md:flex items-center gap-8 text-xs text-ink-secondary font-medium">
-        <a href="#section-chat" className="hover:text-white transition-colors">
-          Messages
-        </a>
-        <a href="#section-spot" className="hover:text-white transition-colors">
-          The Spot
-        </a>
-        <a href="#section-spaces" className="hover:text-white transition-colors">
-          Spaces
-        </a>
-        <a href="#section-room" className="hover:text-white transition-colors">
-          Personal Room
-        </a>
-      </div>
+        <div className="navbar-nav-links">
+          <a href="#section-chat" className="navbar-link">
+            Messages
+          </a>
+          <a href="#section-spot" className="navbar-link">
+            The Spot
+          </a>
+          <a href="#section-spaces" className="navbar-link">
+            Spaces
+          </a>
+          <a href="#section-room" className="navbar-link">
+            Personal Room
+          </a>
+          <a href="#principles" className="navbar-link">
+            Principles
+          </a>
+          <Link href="/status" className="navbar-link">
+            Status
+          </Link>
+        </div>
 
-      <div className="flex items-center gap-2.5">
-        <button
-          type="button"
-          onClick={onOpenSearch}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-oled-surface hover:bg-oled-elevated hairline-border text-xs text-ink-secondary hover:text-white transition-all"
-        >
-          <Search size={14} />
-          <span>Find people</span>
-          <span className="font-mono text-[10px] text-ink-muted ml-1">⌘K</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onEnterApp('dms')}
-          className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-medium tracking-tight transition-all flex items-center gap-1.5 shadow-sm"
-        >
-          <span>Open Holoraa</span>
-          <ArrowUpRight size={14} />
-        </button>
-      </div>
-    </nav>
+        <div className="navbar-actions-group">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            className="navbar-search-btn"
+            aria-label="Find people with command palette"
+          >
+            <Search size={14} />
+            <span className="navbar-search-label">Find people</span>
+            <span className="navbar-search-kbd">⌘K</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onEnterApp('dms')}
+            className="navbar-cta-btn"
+          >
+            <span className="navbar-cta-text-full">Open Holoraa</span>
+            <span className="navbar-cta-text-short">Open</span>
+            <ArrowUpRight size={14} />
+          </button>
+
+          {/* Mobile hamburger toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="navbar-mobile-toggle"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-panel"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Menu Panel */}
+      {mobileMenuOpen && (
+        <div id="mobile-nav-panel" className="navbar-mobile-panel" role="region" aria-label="Mobile Navigation">
+          <div className="navbar-mobile-links">
+            <a
+              href="#section-chat"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Messages & Chat
+            </a>
+            <a
+              href="#section-spot"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              The Spot & Moments
+            </a>
+            <a
+              href="#section-spaces"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Spaces & Voice Lounge
+            </a>
+            <a
+              href="#section-room"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Personal Rooms
+            </a>
+            <a
+              href="#principles"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Principles
+            </a>
+            <Link
+              href="/status"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              System Status
+            </Link>
+            <Link
+              href="/sign-in"
+              className="navbar-mobile-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In (In Development)
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
   );
 }

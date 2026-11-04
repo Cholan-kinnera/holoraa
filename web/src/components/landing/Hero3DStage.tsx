@@ -1,18 +1,47 @@
 'use client';
 
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { ArrowRight, DoorOpen, Sparkles, SquarePen } from '../ui/Icons';
+import { gsap } from '@/lib/gsap';
+import { prefersReducedMotion } from '@/lib/motion';
 
 interface Hero3DStageProps {
   onEnterApp: (tab?: string) => void;
 }
 
 export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
+  const containerRef = useRef<HTMLElement>(null);
+  const [previewTab, setPreviewTab] = useState<'spot' | 'chat'>('spot');
+
+  useLayoutEffect(() => {
+    const root = containerRef.current;
+    if (!root || prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      tl.fromTo('.hero-floating-pills', { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.6 })
+        .fromTo('.hero-pill', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.3')
+        .fromTo('.hero-headline', { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, '-=0.4')
+        .fromTo('.hero-subhead', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7 }, '-=0.5')
+        .fromTo('.hero-actions', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.5')
+        .fromTo(
+          '#hero-preview-frame',
+          { y: 40, opacity: 0, scale: 0.96 },
+          { y: 0, opacity: 1, scale: 1, duration: 1.1, ease: 'power3.out' },
+          '-=0.4'
+        );
+    }, root);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="pt-32 sm:pt-36 pb-20 px-6 max-w-6xl mx-auto text-center relative">
+    <section ref={containerRef} className="hero-3d-stage">
       {/* Floating Live Activity Pills */}
-      <div className="hidden lg:flex items-center justify-between max-w-4xl mx-auto mb-6 pointer-events-none">
-        <div className="float-pill inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-oled-surface/90 hairline-border text-xs text-ink-secondary backdrop-blur-md">
+      <div className="hero-floating-pills">
+        <div className="float-pill hero-float-card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
@@ -21,13 +50,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
           />
           <span>
             <strong className="text-white font-medium">Aanya</strong> dropped a thought ·{' '}
-            <span className="font-mono text-[10px] text-ink-muted">2s ago</span>
+            <span className="font-mono text-xs text-ink-muted">2s ago</span>
           </span>
         </div>
-        <div
-          className="float-pill inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-oled-surface/90 hairline-border text-xs text-ink-secondary backdrop-blur-md"
-          style={{ animationDelay: '1.6s' }}
-        >
+        <div className="float-pill hero-float-card delay-1600">
           <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
           <span>
             <strong className="text-white font-medium">Rohan & Kabir</strong> in Late Night Lounge
@@ -35,28 +61,28 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
         </div>
       </div>
 
-      <div className="hero-pill inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-oled-surface hairline-border text-ink-secondary text-xs mb-7">
+      <div className="hero-pill">
         <span className="w-1.5 h-1.5 rounded-full bg-accent-coral" />
         <span>Messages · Thoughts · Spaces · Personal Rooms</span>
       </div>
 
-      <h1 className="hero-headline font-semibold text-4xl sm:text-6xl md:text-7xl tracking-tight text-white max-w-4xl mx-auto leading-[1.04]">
+      <h1 className="hero-headline">
         One quiet place for the <br className="hidden sm:inline" />
-        <span className="font-serif italic font-normal text-neutral-300 text-5xl sm:text-7xl md:text-[82px]">
+        <span className="hero-headline-serif">
           people who matter.
         </span>
       </h1>
 
-      <p className="hero-subhead mt-6 text-base sm:text-lg text-ink-secondary max-w-xl mx-auto font-normal leading-relaxed">
+      <p className="hero-subhead">
         Private messaging, shared thoughts, quiet voice lounges, and personal rooms. Pitch black,
         zero ads, no noise.
       </p>
 
-      <div className="hero-actions mt-9 flex flex-wrap items-center justify-center gap-3">
+      <div className="hero-actions">
         <button
           type="button"
           onClick={() => onEnterApp('dms')}
-          className="px-7 py-3.5 rounded-full bg-white text-black hover:bg-neutral-200 font-medium text-sm transition-all flex items-center gap-2 shadow-sm"
+          className="btn-primary-launch"
         >
           <span>Launch Web App</span>
           <ArrowRight size={16} />
@@ -64,7 +90,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
         <button
           type="button"
           onClick={() => onEnterApp('spot')}
-          className="px-6 py-3.5 rounded-full bg-oled-surface hover:bg-oled-elevated text-white hairline-border font-medium text-sm transition-all flex items-center gap-2"
+          className="btn-glass-action"
         >
           <Sparkles size={16} className="text-accent-coral" />
           <span>Explore The Spot</span>
@@ -72,7 +98,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
         <button
           type="button"
           onClick={() => onEnterApp('room')}
-          className="px-6 py-3.5 rounded-full bg-oled-surface hover:bg-oled-elevated text-white hairline-border font-medium text-sm transition-all flex items-center gap-2"
+          className="btn-glass-action"
         >
           <DoorOpen size={16} className="text-accent-green" />
           <span>My Room</span>
@@ -80,19 +106,16 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
       </div>
 
       {/* 3D App Preview Frame */}
-      <div className="mt-14 sm:mt-16 relative mx-auto max-w-5xl" style={{ perspective: '1400px' }}>
-        <div
-          id="hero-preview-frame"
-          className="rounded-[28px] bg-oled-sidebar hairline-border shadow-2xl overflow-hidden text-left transform-gpu transition-all duration-700"
-        >
+      <div className="hero-preview-container perspective-1400">
+        <div id="hero-preview-frame" className="hero-preview-window">
           {/* Mock Window Header */}
-          <div className="h-11 px-4 bg-oled-black hairline-b flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-800" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-800" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-800" />
+          <div className="hero-window-header">
+            <div className="window-dots">
+              <span className="window-dot" />
+              <span className="window-dot" />
+              <span className="window-dot" />
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-ink-secondary">
+            <div className="window-title">
               <span>holoraa.app</span>
               <span className="text-ink-muted">·</span>
               <span className="text-accent-green flex items-center gap-1">
@@ -102,16 +125,20 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
             <button
               type="button"
               onClick={() => onEnterApp('spot')}
-              className="text-[11px] text-accent-coral hover:underline font-medium"
+              className="text-xs text-accent-coral hover:underline font-medium"
             >
               Open full screen →
             </button>
           </div>
 
+          <p className="sr-only">
+            Illustrative preview of a conversation view. It is not a screenshot of a released interface.
+          </p>
+
           {/* Mini Preview Split */}
-          <div className="grid grid-cols-1 md:grid-cols-12 h-[440px] bg-oled-black">
+          <div className="hero-window-body">
             {/* Left Mini Drawer */}
-            <div className="hidden md:flex md:col-span-4 flex-col hairline-r bg-oled-sidebar p-4 justify-between">
+            <div className="hero-mini-drawer">
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-semibold text-sm text-white">Messages & Notes</span>
@@ -131,7 +158,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                         className="w-full h-full object-cover rounded-full"
                       />
                     </div>
-                    <span className="text-[10px] text-white">Fred again 🎧</span>
+                    <span className="text-xs text-white">Fred again 🎧</span>
                   </div>
                   <div
                     className="flex flex-col items-center gap-1 cursor-pointer"
@@ -145,7 +172,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                         className="w-full h-full object-cover rounded-full"
                       />
                     </div>
-                    <span className="text-[10px] text-accent-green">in room 🎙️</span>
+                    <span className="text-xs text-accent-green">in room 🎙️</span>
                   </div>
                   <div
                     className="flex flex-col items-center gap-1 cursor-pointer"
@@ -159,7 +186,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                         className="w-full h-full object-cover rounded-full"
                       />
                     </div>
-                    <span className="text-[10px] text-ink-secondary">film lab 🎞️</span>
+                    <span className="text-xs text-ink-secondary">film lab 🎞️</span>
                   </div>
                 </div>
 
@@ -178,7 +205,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-medium text-white">Aanya Sharma</span>
-                        <span className="font-mono text-[10px] text-ink-muted">12:38</span>
+                        <span className="font-mono text-xs text-ink-muted">12:38</span>
                       </div>
                       <p className="text-xs text-ink-secondary truncate">Grabbed our corner table ☕</p>
                     </div>
@@ -196,7 +223,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-medium text-white">Weekend Goa Plan 🌴</span>
-                        <span className="font-mono text-[10px] text-ink-muted">11:20</span>
+                        <span className="font-mono text-xs text-ink-muted">11:20</span>
                       </div>
                       <p className="text-xs text-white font-medium truncate">
                         Meera: Hop in Arjun&apos;s room at 9!
@@ -215,98 +242,130 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                   <span className="w-2 h-2 rounded-full bg-accent-green animate-ping" />
                   <span className="text-xs text-white font-medium">holoraa.app/arjun</span>
                 </div>
-                <span className="text-[11px] text-accent-green">1 knocking →</span>
+                <span className="text-xs text-accent-green">1 knocking →</span>
               </div>
             </div>
 
-            {/* Right Mini Preview: The Spot */}
-            <div className="col-span-1 md:col-span-8 flex flex-col justify-between p-5 bg-oled-black">
+            {/* Right Mini Preview Stage */}
+            <div className="hero-mini-stage">
               <div className="flex items-center justify-between pb-3.5 hairline-b">
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-white text-black text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('spot')}
+                    className={previewTab === 'spot' ? 'tab-pill-active' : 'tab-pill-inactive'}
+                  >
                     The Spot · Thoughts
-                  </span>
-                  <span
-                    onClick={() => onEnterApp('dms')}
-                    className="px-3 py-1 rounded-full bg-oled-surface text-ink-secondary hover:text-white text-xs cursor-pointer transition-colors"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('chat')}
+                    className={previewTab === 'chat' ? 'tab-pill-active' : 'tab-pill-inactive'}
                   >
                     Direct Chat
-                  </span>
+                  </button>
                 </div>
-                <span className="text-[11px] text-ink-secondary font-mono">
+                <span className="text-xs text-ink-secondary font-mono">
                   Calm Graph · Mutuals first
                 </span>
               </div>
 
-              {/* Mini Thoughts Stream Preview */}
-              <div className="space-y-3 my-auto py-3">
-                <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
+              {previewTab === 'spot' ? (
+                /* Mini Thoughts Stream Preview */
+                <div className="space-y-3 my-auto py-3">
+                  <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                          className="w-8 h-8 rounded-full object-cover"
+                          alt="Aanya"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-white">Aanya Sharma</span>
+                            <span className="text-xs text-ink-secondary">@aanya</span>
+                            <span className="px-2 py-0.5 rounded-full bg-oled-elevated text-xs text-ink-secondary">
+                              🎧 Fred again..
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono text-xs text-ink-muted">4m</span>
+                    </div>
+                    <p className="text-xs text-neutral-200 leading-relaxed pl-10">
+                      Editing the 35mm roll from Pondicherry. Love having a quiet spot to share
+                      snapshots with close friends without reels algorithms.
+                    </p>
+                    <div className="pl-10 flex items-center gap-4 text-xs text-ink-secondary">
+                      <span className="text-accent-coral flex items-center gap-1">❤️ 18</span>
+                      <button
+                        type="button"
+                        onClick={() => onEnterApp('spot')}
+                        className="hover:text-white transition-colors"
+                      >
+                        Reply in DM →
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
+                          className="w-8 h-8 rounded-full object-cover"
+                          alt="Kabir"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-white">Kabir Menon</span>
+                            <span className="text-xs text-ink-secondary">@kabir</span>
+                            <span className="px-2 py-0.5 rounded-full bg-oled-elevated text-xs text-accent-green">
+                              🌙 late night
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono text-xs text-ink-muted">19m</span>
+                    </div>
+                    <p className="text-xs text-neutral-200 leading-relaxed pl-10">
+                      Anyone up for a late-night synth jam in the lounge at 11? Dropping stems now.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Mini Chat Stream Preview */
+                <div className="space-y-3 my-auto py-3">
+                  <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
+                    <div className="flex items-start gap-2.5">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                        className="w-8 h-8 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover mt-0.5"
                         alt="Aanya"
                       />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-white">Aanya Sharma</span>
-                          <span className="text-[11px] text-ink-secondary">@aanya</span>
-                          <span className="px-2 py-0.5 rounded-full bg-oled-elevated text-[10px] text-ink-secondary">
-                            🎧 Fred again..
-                          </span>
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-white">Aanya Sharma</span>
+                        <div className="p-2.5 rounded-2xl bg-oled-bubble hairline-border text-xs text-neutral-200">
+                          Saved our corner table at Blue Tokai ☕ Grab the cold brew!
                         </div>
                       </div>
                     </div>
-                    <span className="font-mono text-[10px] text-ink-muted">4m</span>
                   </div>
-                  <p className="text-xs text-neutral-200 leading-relaxed pl-10">
-                    Editing the 35mm roll from Pondicherry. Love having a quiet spot to share
-                    snapshots with close friends without reels algorithms.
-                  </p>
-                  <div className="pl-10 flex items-center gap-4 text-[11px] text-ink-secondary">
-                    <span className="text-accent-coral flex items-center gap-1">❤️ 18</span>
-                    <button
-                      type="button"
-                      onClick={() => onEnterApp('spot')}
-                      className="hover:text-white transition-colors"
-                    >
-                      Reply in DM →
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
-                        className="w-8 h-8 rounded-full object-cover"
-                        alt="Kabir"
-                      />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-white">Kabir Menon</span>
-                          <span className="text-[11px] text-ink-secondary">@kabir</span>
-                          <span className="px-2 py-0.5 rounded-full bg-oled-elevated text-[10px] text-accent-green">
-                            🌙 late night
-                          </span>
-                        </div>
-                      </div>
+                  <div className="flex justify-end">
+                    <div className="p-2.5 rounded-2xl bg-white text-black text-xs font-medium max-w-xs">
+                      On my way, bringing my notebook 🏃
                     </div>
-                    <span className="font-mono text-[10px] text-ink-muted">19m</span>
                   </div>
-                  <p className="text-xs text-neutral-200 leading-relaxed pl-10">
-                    Anyone up for a late-night synth jam in the lounge at 11? Dropping stems now.
-                  </p>
                 </div>
-              </div>
+              )}
 
               <div
                 onClick={() => onEnterApp('spot')}
-                className="h-11 px-3.5 rounded-full bg-oled-surface hairline-border flex items-center justify-between cursor-pointer hover:border-white/20 transition-colors"
+                className="hero-mini-composer"
               >
                 <div className="flex items-center gap-2.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

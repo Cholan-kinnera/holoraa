@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { DoorOpen, Hash, MessageCircle, Search, Sliders, Sparkles } from '../ui/Icons';
+import { BrandMark } from '../ui/Brand';
 
 export type WorkspaceTab = 'dms' | 'spot' | 'spaces' | 'room';
 
@@ -36,11 +37,12 @@ export function IconRail({
       <button
         type="button"
         onClick={onReturnToLanding}
-        className="w-10 h-10 rounded-2xl bg-oled-surface hover:bg-oled-elevated hairline-border flex items-center justify-center text-white font-bold text-base transition-all"
+        className="w-10 h-10 rounded-2xl bg-oled-surface hover:bg-oled-elevated hairline-border flex items-center justify-center transition-all cursor-pointer"
         title="Back to Landing Page"
       >
-        h
+        <BrandMark />
       </button>
+
 
       {/* Center Primary Navigation Icons */}
       <div className="flex flex-col items-center gap-3.5">

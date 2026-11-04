@@ -1,32 +1,66 @@
 'use client';
 
-import React from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { CheckCheck } from '../ui/Icons';
+import { gsap } from '@/lib/gsap';
+import { prefersReducedMotion } from '@/lib/motion';
+
 
 interface StoryBentoGridProps {
   onEnterApp: (tab: string) => void;
 }
 
 export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
+  const containerRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const root = containerRef.current;
+    if (!root || prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>('.story-row').forEach((row) => {
+        gsap.fromTo(
+          row,
+          { y: 48, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.85,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: row,
+              start: 'top 82%',
+              toggleActions: 'play none none reverse',
+            },
+          }
+        );
+      });
+    }, root);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="py-24 px-6 max-w-6xl mx-auto space-y-32">
+    <section ref={containerRef} className="story-bento-section">
       {/* Pillar 01: Direct & Groups */}
-      <div id="section-chat" className="story-row grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        <div className="lg:col-span-5 space-y-4">
-          <span className="text-xs font-mono text-accent-coral tracking-wider">01 / DIRECT & GROUPS</span>
-          <h2 className="font-semibold text-3xl sm:text-4xl text-white tracking-tight leading-tight">
+      <div id="section-chat" className="story-row story-row--chat">
+        <div className="story-row-info">
+          <span className="story-pillar-num">01 / DIRECT & GROUPS</span>
+          <h2 className="story-pillar-title">
             Fast, familiar chat. <br />
-            <span className="font-serif italic font-normal text-neutral-300 text-4xl sm:text-5xl">
+            <span className="story-serif-highlight">
               Stripped of clutter.
             </span>
           </h2>
-          <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
+          <p className="story-pillar-desc">
             Everything you love about direct conversations—instant photos, crisp read ticks,
             swipe-feel replies, and top status notes—on a calm pitch-black canvas.
           </p>
         </div>
 
-        <div className="lg:col-span-7 p-6 sm:p-8 rounded-[28px] bg-oled-surface hairline-border space-y-4">
+        <div className="story-card-wrapper">
           <div className="flex items-start gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -35,11 +69,11 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
               alt="Aanya"
             />
             <div className="space-y-1.5">
-              <div className="p-1.5 rounded-[22px] bg-oled-bubble hairline-border max-w-xs overflow-hidden">
+              <div className="story-photo-bubble">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80"
-                  className="w-full h-44 object-cover rounded-[16px]"
+                  className="w-full h-44 object-cover rounded-xl"
                   alt="Beach sunset"
                 />
                 <p className="px-3 py-2 text-xs text-neutral-200">Morning coffee by the coast ☕🌊</p>
@@ -47,14 +81,14 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
               <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-oled-elevated hairline-border text-xs">
                 <span>❤️</span>
                 <span>🔥</span>
-                <span className="text-[11px] text-ink-secondary ml-0.5">3</span>
+                <span className="text-xs text-ink-secondary ml-0.5">3</span>
               </div>
             </div>
           </div>
 
           <div className="flex justify-end">
-            <div className="max-w-xs px-4 py-2.5 rounded-[20px] rounded-br-md bg-white text-black text-xs leading-relaxed">
-              <div className="mb-1.5 pl-2 border-l-2 border-neutral-400 text-[11px] text-neutral-600 truncate">
+            <div className="story-outgoing-bubble">
+              <div className="story-quote-reply truncate">
                 Aanya: Morning coffee by the coast ☕🌊
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -67,8 +101,8 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
       </div>
 
       {/* Pillar 02: The Spot & Graph */}
-      <div id="section-spot" className="story-row grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        <div className="lg:col-span-7 order-2 lg:order-1 p-6 sm:p-8 rounded-[28px] bg-oled-surface hairline-border space-y-4">
+      <div id="section-spot" className="story-row story-row--spot">
+        <div className="story-card-wrapper">
           <div className="p-4 rounded-2xl bg-oled-black hairline-border space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -81,9 +115,9 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-white">Meera Nair</span>
-                    <span className="text-[11px] text-ink-secondary">@meera</span>
+                    <span className="text-xs text-ink-secondary">@meera</span>
                   </div>
-                  <p className="text-[11px] text-ink-secondary">Followed by Aanya + 6 mutuals</p>
+                  <p className="text-xs text-ink-secondary">Followed by Aanya + 6 mutuals</p>
                 </div>
               </div>
               <button
@@ -105,7 +139,7 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
               <button
                 type="button"
                 onClick={() => onEnterApp('spot')}
-                className="text-white hover:underline text-xs"
+                className="text-white hover:underline text-xs font-medium"
               >
                 Reply in DM →
               </button>
@@ -113,15 +147,15 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
           </div>
         </div>
 
-        <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
-          <span className="text-xs font-mono text-accent-coral tracking-wider">02 / THE SPOT & GRAPH</span>
-          <h2 className="font-semibold text-3xl sm:text-4xl text-white tracking-tight leading-tight">
+        <div className="story-row-info">
+          <span className="story-pillar-num">02 / THE SPOT & GRAPH</span>
+          <h2 className="story-pillar-title">
             Share thoughts. <br />
-            <span className="font-serif italic font-normal text-neutral-300 text-4xl sm:text-5xl">
+            <span className="story-serif-highlight">
               Connect through friends.
             </span>
           </h2>
-          <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
+          <p className="story-pillar-desc">
             A calm stream for spontaneous thoughts, music notes, and photos. Discover people in your
             orbit through mutual connections—and reply straight into a private DM with one tap.
           </p>
@@ -129,25 +163,25 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
       </div>
 
       {/* Pillar 03: Quiet Spaces */}
-      <div id="section-spaces" className="story-row grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        <div className="lg:col-span-5 space-y-4">
-          <span className="text-xs font-mono text-accent-coral tracking-wider">03 / COMMUNITIES</span>
-          <h2 className="font-semibold text-3xl sm:text-4xl text-white tracking-tight leading-tight">
+      <div id="section-spaces" className="story-row story-row--spaces">
+        <div className="story-row-info">
+          <span className="story-pillar-num">03 / COMMUNITIES</span>
+          <h2 className="story-pillar-title">
             Spaces without the <br />
-            <span className="font-serif italic font-normal text-neutral-300 text-4xl sm:text-5xl">
+            <span className="story-serif-highlight">
               notification fatigue.
             </span>
           </h2>
-          <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
+          <p className="story-pillar-desc">
             Run a close study group, design club, or gaming crew. Clean text channels and a cozy voice
             lounge where friends can pull up a chair without 50 blinking badges.
           </p>
         </div>
 
-        <div className="lg:col-span-7 p-6 sm:p-8 rounded-[28px] bg-oled-surface hairline-border">
+        <div className="story-card-wrapper">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-oled-black hairline-border space-y-2.5">
-              <p className="text-[11px] uppercase tracking-wider text-ink-muted font-medium">Channels</p>
+              <p className="text-xs uppercase tracking-wider text-ink-muted font-medium">Channels</p>
               <div className="space-y-1 text-xs">
                 <div className="px-3 py-2 rounded-xl bg-oled-elevated text-white font-medium flex items-center justify-between">
                   <span># general</span>
@@ -168,7 +202,7 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                   <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
                   Late Night Lounge
                 </span>
-                <span className="text-[11px] text-ink-secondary">3 inside</span>
+                <span className="text-xs text-ink-secondary">3 inside</span>
               </div>
               <div className="flex items-center -space-x-2 my-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -203,8 +237,8 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
       </div>
 
       {/* Pillar 04: Personal Rooms */}
-      <div id="section-room" className="story-row grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        <div className="lg:col-span-7 order-2 lg:order-1 p-6 sm:p-8 rounded-[28px] bg-oled-surface hairline-border flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div id="section-room" className="story-row story-row--room">
+        <div className="story-card-wrapper flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -238,15 +272,15 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
           </div>
         </div>
 
-        <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
-          <span className="text-xs font-mono text-accent-coral tracking-wider">04 / PERSONAL ROOMS</span>
-          <h2 className="font-semibold text-3xl sm:text-4xl text-white tracking-tight leading-tight">
+        <div className="story-row-info">
+          <span className="story-pillar-num">04 / PERSONAL ROOMS</span>
+          <h2 className="story-pillar-title">
             Your own corner <br />
-            <span className="font-serif italic font-normal text-neutral-300 text-4xl sm:text-5xl">
+            <span className="story-serif-highlight">
               on the internet.
             </span>
           </h2>
-          <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
+          <p className="story-pillar-desc">
             Share one permanent link—<span className="text-white">holoraa.app/arjun</span>. Friends knock to
             enter your waiting room, and you let them in with a tap.
           </p>

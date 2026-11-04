@@ -1,25 +1,28 @@
 /**
- * The Holoraa mark and logo. Plain <img> tags are used on purpose: next/image
- * adds an inline style attribute, which the nonce-only style-src policy blocks.
- * The files are static SVG in public/brand.
+ * Branding component for Holoraa.
+ *
+ * The official Holoraa logo will be provided separately.
+ * In accordance with project instructions:
+ * - No logo is generated or invented.
+ * - Logo placement is reserved with appropriate sizing.
+ * - A clean, understated text label is used.
  */
 
-/** The mark. It is decorative, because the adjacent text carries the name. */
-export function BrandMark({ size = 28 }: { size?: number }) {
-  // eslint-disable-next-line @next/next/no-img-element -- next/image would emit an inline style blocked by CSP.
-  return <img src="/brand/holoraa-mark.svg" alt="" width={size} height={size} className="brand__mark" />;
+export function BrandMark({ className = "" }: { size?: number; className?: string } = {}) {
+  return (
+    <span className={`brand-mark-reserved ${className}`} aria-hidden="true">
+      <span className="brand-mark-text">h</span>
+    </span>
+  );
 }
 
-/** The full logo with the wordmark. Its name is the alt text. */
-export function BrandLogo({ width = 160 }: { width?: number }) {
+
+
+
+export function BrandLogo({ className = "" }: { className?: string; width?: number }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- see BrandMark.
-    <img
-      src="/brand/holoraa-logo.svg"
-      alt="Holoraa"
-      width={width}
-      height={Math.round((width * 1420) / 1254)}
-      className="brand-logo"
-    />
+    <span className={`brand-logo-reserved font-semibold tracking-tight text-white font-sans ${className}`}>
+      holoraa
+    </span>
   );
 }

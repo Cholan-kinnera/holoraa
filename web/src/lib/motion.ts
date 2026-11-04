@@ -21,8 +21,12 @@ function subscribe(onChange: () => void): () => void {
 }
 
 function snapshot(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
   return window.matchMedia(QUERY).matches;
 }
+
 
 /**
  * True when the user asks for reduced motion. Call it only in the browser

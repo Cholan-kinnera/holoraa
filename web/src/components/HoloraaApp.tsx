@@ -12,11 +12,16 @@ import {
   type SpaceData,
 } from '../lib/data/mock-data';
 import type { DirectoryUser, ThoughtRecord } from '../lib/dsa/search-graph';
+import Link from 'next/link';
 import { rankThoughts } from '../lib/dsa/search-graph';
 import { FloatingNavbar } from './landing/FloatingNavbar';
 import { Hero3DStage } from './landing/Hero3DStage';
 import { LiveSearchPlayground } from './landing/LiveSearchPlayground';
 import { StoryBentoGrid } from './landing/StoryBentoGrid';
+import { Principles } from './landing/Principles';
+import { Holories } from './landing/Holories';
+import { FinalCta } from './landing/FinalCta';
+import { BrandLogo } from './ui/Brand';
 import { CommandPaletteModal } from './modals/CommandPaletteModal';
 import { ContactSafetyModal } from './modals/ContactSafetyModal';
 import { ProfileDrawerModal } from './modals/ProfileDrawerModal';
@@ -25,6 +30,7 @@ import { ContextDrawer } from './workspace/ContextDrawer';
 import { IconRail, type WorkspaceTab } from './workspace/IconRail';
 import { MainStage } from './workspace/MainStage';
 import { RightOrbitRail } from './workspace/RightOrbitRail';
+
 
 export function HoloraaApp() {
   // Current view mode: landing page vs interactive 4-column web app
@@ -346,30 +352,38 @@ export function HoloraaApp() {
             />
 
             <StoryBentoGrid onEnterApp={handleEnterApp} />
+
+            <Principles />
+
+            <Holories />
+
+            <FinalCta />
           </main>
 
           <footer className="py-12 border-t hairline-border bg-oled-black text-center text-xs text-ink-muted">
-            <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="font-display font-semibold text-white tracking-wider">holoraa</span>
+                <BrandLogo className="text-sm font-semibold tracking-tight text-white" />
                 <span>·</span>
                 <span>One quiet place for the people who matter.</span>
               </div>
-              <div className="flex items-center gap-6 text-ink-secondary">
-                <button
-                  type="button"
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="hover:text-white transition-colors"
-                >
-                  Privacy
-                </button>
-                <a href="/status" className="hover:text-white transition-colors">
-                  System Status
+              <nav aria-label="Footer Navigation" className="flex items-center gap-6 text-ink-secondary">
+                <a href="#principles" className="hover:text-white transition-colors">
+                  Principles
                 </a>
+                <a href="#holories" className="hover:text-white transition-colors">
+                  Holories
+                </a>
+                <Link href="/status" className="hover:text-white transition-colors">
+                  System Status
+                </Link>
+                <Link href="/sign-in" className="hover:text-white transition-colors">
+                  Sign In
+                </Link>
                 <a href="/prototype.html" className="hover:text-white transition-colors">
                   Original Prototype
                 </a>
-              </div>
+              </nav>
             </div>
           </footer>
         </div>

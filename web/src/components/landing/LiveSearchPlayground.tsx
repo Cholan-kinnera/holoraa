@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DirectoryUser } from '../../lib/dsa/search-graph';
 import {
   buildUserSearchTrie,
   searchPeople,
 } from '../../lib/dsa/search-graph';
 import { Search } from '../ui/Icons';
+import { gsap } from '@/lib/gsap';
+import { prefersReducedMotion } from '@/lib/motion';
+
 
 interface LiveSearchPlaygroundProps {
   peopleDirectory: Record<string, DirectoryUser>;
@@ -23,8 +26,8 @@ export function LiveSearchPlayground({
   onToggleFollow,
   onSelectUser,
 }: LiveSearchPlaygroundProps) {
+  const containerRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
-
   const [latencyMs, setLatencyMs] = useState('0.2');
 
   const trie = useMemo(() => buildUserSearchTrie(peopleDirectory), [peopleDirectory]);
@@ -36,30 +39,56 @@ export function LiveSearchPlayground({
 
   const myFollowing = socialGraph[currentUserId] || new Set<string>();
 
+  useLayoutEffect(() => {
+    const root = containerRef.current;
+    if (!root || prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.search-playground-card',
+        { y: 36, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.search-playground-card',
+            start: 'top 85%',
+          },
+        }
+      );
+    }, root);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="py-16 px-6 max-w-5xl mx-auto">
-      <div className="p-6 sm:p-10 rounded-[32px] bg-oled-sidebar hairline-border relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+    <section ref={containerRef} className="search-playground-section">
+      <div className="search-playground-card">
+        <div className="search-playground-head">
           <div>
-            <span className="font-mono text-[11px] text-accent-coral uppercase tracking-wider">
+            <span className="font-mono text-xs text-accent-coral uppercase tracking-wider font-medium">
               Live Search & Mutual Graph
             </span>
             <h2 className="font-semibold text-2xl sm:text-3xl text-white tracking-tight mt-1">
               Find your people in milliseconds.
             </h2>
             <p className="text-xs sm:text-sm text-ink-secondary mt-1">
-              Try searching a name, handle, or vibe below—powered by instant prefix matching and
+              Search a name, handle, or vibe below—powered by instant prefix matching and
               mutual-friend discovery.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="text-ink-muted mr-1">Try:</span>
             {['aanya', 'film', 'coffee', 'synth'].map((vibe) => (
               <button
                 key={vibe}
                 type="button"
                 onClick={() => setQuery(vibe)}
-                className="px-2.5 py-1 rounded-full bg-oled-elevated hover:bg-neutral-800 text-neutral-300 transition-colors"
+                className="chip-suggestion"
               >
                 {vibe}
               </button>
@@ -67,7 +96,7 @@ export function LiveSearchPlayground({
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="px-2.5 py-1 rounded-full bg-oled-surface text-ink-secondary hover:text-white transition-colors"
+              className="chip-reset"
             >
               Reset
             </button>
@@ -76,7 +105,7 @@ export function LiveSearchPlayground({
 
         {/* Live Search Input */}
         <div className="relative mb-6">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-secondary">
+          <div className="search-input-icon">
             <Search size={16} />
           </div>
           <input
@@ -90,15 +119,16 @@ export function LiveSearchPlayground({
               setLatencyMs(elapsed);
             }}
             placeholder="Search people, @handles, thoughts, or vibes (e.g. 'film', 'coffee', 'kabir')..."
-            className="w-full pl-11 pr-32 py-3.5 rounded-2xl bg-oled-black hairline-border text-sm text-white placeholder-ink-muted focus:outline-none focus:border-white/25 transition-all"
+            className="search-input-field"
           />
-          <span className="font-mono text-[11px] text-ink-muted absolute right-4 top-1/2 -translate-y-1/2">
-            {results.length} people ({latencyMs}ms)
+          <span className="search-latency-badge">
+            {results.length} results ({latencyMs}ms)
           </span>
+
         </div>
 
         {/* Results Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="search-results-grid">
           {results.slice(0, 4).map(({ user, mutuals }) => {
             const isFollowing = myFollowing.has(user.id);
             const firstMutual = mutuals[0];
@@ -113,7 +143,7 @@ export function LiveSearchPlayground({
               <div
                 key={user.id}
                 onClick={() => onSelectUser(user.id)}
-                className="p-3.5 rounded-2xl bg-oled-black hairline-border hover:border-white/20 transition-all flex items-center justify-between gap-3 cursor-pointer"
+                className="search-result-card"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -125,10 +155,10 @@ export function LiveSearchPlayground({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold text-white truncate">{user.name}</span>
-                      <span className="text-[11px] text-ink-secondary">{user.handle}</span>
+                      <span className="text-xs text-ink-secondary">{user.handle}</span>
                     </div>
-                    <p className="text-[11px] text-ink-secondary truncate">{user.bio}</p>
-                    <p className="text-[10px] text-accent-coral mt-0.5">{mutualText}</p>
+                    <p className="text-xs text-ink-secondary truncate">{user.bio}</p>
+                    <p className="text-xs text-accent-coral mt-0.5">{mutualText}</p>
                   </div>
                 </div>
                 <button

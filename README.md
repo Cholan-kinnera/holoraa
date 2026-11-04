@@ -2,19 +2,20 @@
 
 > One simple, safe place to talk, share, and hang out with the people who matter.
 
-Holoraa is in early foundation work. **Nothing user-facing exists yet.**
+Holoraa is in active development with a working full-stack prototype and foundation.
 
 ## Status
 
 | Part | State |
 |---|---|
 | Governance and rules | Drafted. See [AGENTS.md](AGENTS.md) and [docs/adr/](docs/adr/README.md). |
-| Backend (Go) | Health (`/v1/health`), readiness (`/v1/ready`, checks PostgreSQL), configuration, structured logs, and goose migrations. |
-| Database | Local PostgreSQL 17 in Docker, isolated from any other project. Baseline migration only; no tables yet. |
-| Contract | OpenAPI 3.1.1 in `contracts/`. Covers the two health endpoints. |
-| Web app | Status page (Next.js) showing the API and database state, using the generated client. |
-| Sign-in and profiles | Email code sign-in, server sessions, and profiles are in the API (M9 slice 1). Web sign-in screens and Google sign-in are not started. |
-| Messaging, calls, feeds | Not started. Each needs an owner-approved design first. |
+| Backend (Go) | Modular monolith with Chi routing, M3 sqlc queries (`backend/internal/store/dbstore`), D11 trusted-proxy CIDR filtering, health, readiness, and goose migrations. |
+| Database | Local PostgreSQL 17 in Docker. Migrations 00001 (baseline) and 00002 (identities and users) applied. |
+| Contract | OpenAPI 3.1.1 in `contracts/`. Verified in M4 spike with `oapi-codegen` and `jsonschema/v6` ([ADR 0010](docs/adr/0010-contract-generators-and-validators.md)). |
+| Web app | Next.js 16 (App Router) with dark-first OLED aesthetic, floating glass navbar, interactive hero stage, live mutual graph search, authenticated app shell, and status page (`/status`). |
+| Sign-in and profiles | Email verification code sign-in, server-side sessions (`__Host-` / `holoraa_session`), profile management, and protected routes. |
+| Frontend Polish | **Milestone 1 Completed**: Floating glass pill navbar with mobile responsive sheet, editorial typography scales, ambient radial glows, and interactive live search playground. |
+| Messaging, calls, feeds | In build and progressive refinement across milestones 2–5. |
 
 The milestones are in [docs/MILESTONE_GATES.md](docs/MILESTONE_GATES.md). The tooling choices and their verification status are in [ADR 0008](docs/adr/0008-foundation-skeleton-tooling.md) (Proposed).
 
