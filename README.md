@@ -14,8 +14,8 @@ Holoraa is in active development with a working full-stack prototype and foundat
 | Contract | OpenAPI 3.1.1 in `contracts/`. Verified in M4 spike with `oapi-codegen` and `jsonschema/v6` ([ADR 0010](docs/adr/0010-contract-generators-and-validators.md)). |
 | Web app | Next.js 16 (App Router) with dark-first OLED aesthetic, floating glass navbar, interactive hero stage, live mutual graph search, authenticated app shell, and status page (`/status`). |
 | Sign-in and profiles | Email verification code sign-in, server-side sessions (`__Host-` / `holoraa_session`), profile management, and protected routes. |
-| Frontend Polish | **Milestones 1 & 2 Completed**: Floating glass pill navbar, responsive menu sheet, editorial typography scales, ambient radial glows, interactive live search playground, 4-column OLED workspace layout engine, Notes tray, active chat indicators, refined message bubbles with reactions, photo cards, and floating composer dock. |
-| Messaging, calls, feeds | In build and progressive refinement across milestones 2–5. |
+| Frontend Polish | **Milestones 1–5 Delivered**: Floating glass pill navbar, responsive menu sheet, editorial typography scales, ambient radial glows, interactive live search playground, 4-column OLED workspace layout engine, Notes tray, active chat indicators, refined message bubbles with reactions, photo cards, floating composer dock, The Spot calm feed with mood pills & DM bridge, Personal Rooms with active speaker audio ring & waiting room knock admission, Command Palette (⌘K), Settings modal, and Profile drawer. |
+| Messaging, calls, feeds | Frontend interfaces and contracts fully aligned and interactive; backend real-time event pipeline in progression. |
 
 The milestones are in [docs/MILESTONE_GATES.md](docs/MILESTONE_GATES.md). The tooling choices and their verification status are in [ADR 0008](docs/adr/0008-foundation-skeleton-tooling.md) (Proposed).
 
