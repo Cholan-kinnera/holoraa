@@ -197,10 +197,10 @@ export function MainStage({
                 >
                   <div className={`flex items-end gap-2 max-w-md ${msg.self ? 'flex-row-reverse' : ''}`}>
                     <div
-                      className={`relative px-4 py-2.5 rounded-[20px] text-[13px] leading-relaxed ${
+                      className={`relative px-4 py-2.5 rounded-[18px] text-[13px] leading-relaxed ${
                         msg.self
-                          ? 'bg-accent-coral text-white rounded-br-md'
-                          : 'bg-oled-bubble text-ink-primary hairline-border rounded-bl-md'
+                          ? 'bg-accent-coral text-white rounded-br-[4px] shadow-md'
+                          : 'bg-oled-bubble text-ink-primary hairline-border rounded-bl-[4px] shadow-sm'
                       }`}
                     >
                       {msg.replyTo && (
@@ -359,15 +359,16 @@ export function MainStage({
                 value={composerText}
                 onChange={(e) => setComposerText(e.target.value)}
                 autoComplete="off"
-                placeholder="Write a message..."
-                className="flex-1 bg-transparent text-sm text-white placeholder-ink-muted focus:outline-none px-1"
+                placeholder={`Message ${currentChat.name}...`}
+                className="flex-1 bg-transparent text-sm text-white placeholder-ink-muted focus:outline-none px-2"
               />
 
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-medium transition-all shrink-0"
+                className="px-3.5 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5"
               >
-                Send
+                <span>Send</span>
+                <Send size={12} />
               </button>
             </form>
           </div>
