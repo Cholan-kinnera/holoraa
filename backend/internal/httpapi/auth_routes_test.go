@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"regexp"
 	"strings"
 	"sync"
@@ -395,6 +396,98 @@ func TestLogsNeverContainCodesTokensOrEmails(t *testing.T) {
 	}
 	if strings.Contains(logText, testSecret) {
 		t.Fatal("the auth secret appears in the logs")
+	}
+}
+
+func TestClientIPWithoutTrustedProxiesIgnoresForwardedHeaders(t *testing.T) {
+	sec := Security{}
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "192.0.2.1:1234"
+	req.Header.Set("X-Forwarded-For", "203.0.113.195, 10.0.0.1")
+
+	if got := sec.ClientIP(req); got != "192.0.2.1" {
+		t.Fatalf("ClientIP = %q, want 192.0.2.1 (fail-closed remote addr)", got)
+	}
+}
+
+func TestClientIPWithUntrustedDirectPeerIgnoresForwardedHeaders(t *testing.T) {
+	prefix := netip.MustParsePrefix("10.0.0.0/8")
+	sec := Security{TrustedProxies: []netip.Prefix{prefix}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "192.0.2.55:4321" // untrusted peer
+	req.Header.Set("X-Forwarded-For", "203.0.113.195")
+
+	if got := sec.ClientIP(req); got != "192.0.2.55" {
+		t.Fatalf("ClientIP = %q, want 192.0.2.55 (untrusted peer ignored header)", got)
+	}
+}
+
+func TestClientIPWithTrustedProxyResolvesClientIP(t *testing.T) {
+	prefix := netip.MustParsePrefix("10.0.0.0/8")
+	sec := Security{TrustedProxies: []netip.Prefix{prefix}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "10.0.0.1:4567" // trusted proxy
+	req.Header.Set("X-Forwarded-For", "203.0.113.195")
+
+	if got := sec.ClientIP(req); got != "203.0.113.195" {
+		t.Fatalf("ClientIP = %q, want 203.0.113.195", got)
+	}
+}
+
+func TestClientIPWithMultiHopProxyChain(t *testing.T) {
+	p1 := netip.MustParsePrefix("10.0.0.0/8")
+	p2 := netip.MustParsePrefix("172.16.0.0/12")
+	sec := Security{TrustedProxies: []netip.Prefix{p1, p2}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "10.0.0.1:1234" // trusted proxy 1
+	// Client -> Trusted Proxy 2 -> Trusted Proxy 1 -> Server
+	req.Header.Set("X-Forwarded-For", "203.0.113.50, 172.16.1.1")
+
+	if got := sec.ClientIP(req); got != "203.0.113.50" {
+		t.Fatalf("ClientIP = %q, want 203.0.113.50", got)
+	}
+}
+
+func TestClientIPSpoofingAttemptThroughTrustedProxy(t *testing.T) {
+	prefix := netip.MustParsePrefix("10.0.0.0/8")
+	sec := Security{TrustedProxies: []netip.Prefix{prefix}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "10.0.0.1:1234" // trusted proxy
+	// Attacker 198.51.100.2 sent "1.1.1.1" to proxy; proxy appended attacker IP
+	req.Header.Set("X-Forwarded-For", "1.1.1.1, 198.51.100.2")
+
+	if got := sec.ClientIP(req); got != "198.51.100.2" {
+		t.Fatalf("ClientIP = %q, want 198.51.100.2 (prevented client spoofing)", got)
+	}
+}
+
+func TestClientIPMalformedHeaders(t *testing.T) {
+	prefix := netip.MustParsePrefix("10.0.0.0/8")
+	sec := Security{TrustedProxies: []netip.Prefix{prefix}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "10.0.0.1:1234"
+	req.Header.Set("X-Forwarded-For", "bad-ip, another-bad-ip")
+
+	if got := sec.ClientIP(req); got != "10.0.0.1" {
+		t.Fatalf("ClientIP = %q, want 10.0.0.1 fallback for malformed header", got)
+	}
+}
+
+func TestClientIPWithIPv6AndPort(t *testing.T) {
+	prefix := netip.MustParsePrefix("::1/128")
+	sec := Security{TrustedProxies: []netip.Prefix{prefix}}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp", nil)
+	req.RemoteAddr = "[::1]:8080"
+	req.Header.Set("X-Forwarded-For", "[2001:db8::1]:1234")
+
+	if got := sec.ClientIP(req); got != "2001:db8::1" {
+		t.Fatalf("ClientIP = %q, want 2001:db8::1", got)
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"mime"
-	"net"
 	"net/http"
 	"strconv"
 )
@@ -45,14 +44,10 @@ func writeJSON(w http.ResponseWriter, r *http.Request, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-// clientIP returns the connection's host address. Forwarded headers are not
-// trusted (see AUTH_AND_PROFILES.md, trusted-proxy item D11).
+// clientIP returns the connection's direct host address when no security context
+// is available, without trusting forwarded headers.
 func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil || host == "" {
-		return "unknown"
-	}
-	return host
+	return Security{}.ClientIP(r)
 }
 
 // setRetryAfter writes the Retry-After header in whole seconds, at least 1.

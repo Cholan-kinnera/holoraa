@@ -6,9 +6,11 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -22,6 +24,7 @@ const (
 	EnvDatabaseURL    = "HOLORAA_DATABASE_URL"
 	EnvAuthSecret     = "HOLORAA_AUTH_SECRET"
 	EnvAllowedOrigins = "HOLORAA_ALLOWED_ORIGINS"
+	EnvTrustedProxies = "HOLORAA_TRUSTED_PROXIES"
 	EnvCookieSecure   = "HOLORAA_COOKIE_SECURE"
 	EnvMailProvider   = "HOLORAA_MAIL_PROVIDER"
 	EnvMailOutboxDir  = "HOLORAA_MAIL_OUTBOX_DIR"
@@ -49,11 +52,12 @@ const (
 
 	// maxDatabaseURLLen bounds an external input (AGENTS.md: every external
 	// input has a size limit).
-	maxDatabaseURLLen = 2048
-	maxOriginsLen     = 1024
-	maxMailFromLen    = 320
-	maxResendKeyLen   = 256
-	maxOutboxDirLen   = 512
+	maxDatabaseURLLen    = 2048
+	maxOriginsLen        = 1024
+	maxTrustedProxiesLen = 2048
+	maxMailFromLen       = 320
+	maxResendKeyLen      = 256
+	maxOutboxDirLen      = 512
 
 	cookieNameSecure = "__Host-holoraa_session"
 	cookieNameLocal  = "holoraa_session"
@@ -77,6 +81,7 @@ type Config struct {
 	DatabaseURL    string
 	AuthSecret     []byte
 	AllowedOrigins []string
+	TrustedProxies []netip.Prefix
 	CookieSecure   bool
 	// CookieName follows the production rule: the __Host- prefix applies when
 	// the cookie is Secure, and plain HTTP development uses the unprefixed name.
@@ -134,6 +139,12 @@ func Load(getenv func(string) string) (Config, error) {
 		return Config{}, &Error{Setting: EnvAllowedOrigins, Reason: err.Error()}
 	}
 	cfg.AllowedOrigins = origins
+
+	trustedProxies, err := parseTrustedProxies(getenv(EnvTrustedProxies))
+	if err != nil {
+		return Config{}, &Error{Setting: EnvTrustedProxies, Reason: err.Error()}
+	}
+	cfg.TrustedProxies = trustedProxies
 
 	secure, err := parseBool(valueOr(getenv(EnvCookieSecure), "true"))
 	if err != nil {
@@ -306,4 +317,43 @@ func parseOrigins(raw string) ([]string, error) {
 		origins = append(origins, u.Scheme+"://"+u.Host)
 	}
 	return origins, nil
+}
+
+// parseTrustedProxies parses a comma-separated list of IPv4/IPv6 addresses and
+// CIDR subnets allowed to forward client addresses via X-Forwarded-For (D11).
+// An empty or unset value returns nil, nil (trusted proxies disabled by default).
+func parseTrustedProxies(raw string) ([]netip.Prefix, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	if len(raw) > maxTrustedProxiesLen {
+		return nil, fmt.Errorf("must be at most %d characters", maxTrustedProxiesLen)
+	}
+
+	parts := strings.Split(raw, ",")
+	prefixes := make([]netip.Prefix, 0, len(parts))
+	for _, part := range parts {
+		token := strings.TrimSpace(part)
+		if token == "" {
+			return nil, errors.New("empty entry in trusted proxies list")
+		}
+		if strings.Contains(token, "/") {
+			prefix, err := netip.ParsePrefix(token)
+			if err != nil {
+				return nil, fmt.Errorf("invalid CIDR %q", token)
+			}
+			if prefix.Masked() != prefix {
+				return nil, fmt.Errorf("invalid CIDR %q: host bits set", token)
+			}
+			prefixes = append(prefixes, prefix)
+		} else {
+			addr, err := netip.ParseAddr(token)
+			if err != nil {
+				return nil, fmt.Errorf("invalid IP address %q", token)
+			}
+			prefixes = append(prefixes, netip.PrefixFrom(addr, addr.BitLen()))
+		}
+	}
+	return prefixes, nil
 }

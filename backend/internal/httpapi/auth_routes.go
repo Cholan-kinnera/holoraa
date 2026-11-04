@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"math"
+	"net"
 	"net/http"
+	"net/netip"
 	"slices"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -13,11 +16,91 @@ import (
 	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
 )
 
-// Security holds the cookie and origin settings the auth routes need.
+// Security holds the cookie, origin, and trusted-proxy settings the auth routes need.
 type Security struct {
 	CookieName     string
 	CookieSecure   bool
 	AllowedOrigins []string
+	TrustedProxies []netip.Prefix
+}
+
+// ClientIP returns the client IP address for the request.
+//
+// When Security.TrustedProxies is empty (the default), forwarded headers are never
+// read and the connection's direct RemoteAddr host is returned (fail-closed, D11).
+//
+// When Security.TrustedProxies is configured, and the direct peer address (RemoteAddr)
+// is in a trusted proxy CIDR subnet, the X-Forwarded-For header is evaluated using a
+// right-to-left walk to identify the first untrusted upstream IP. This prevents spoofed
+// client IPs while supporting multi-hop proxy chains (e.g. Next.js, reverse proxy, or CDN).
+func (s Security) ClientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	directAddr, err := netip.ParseAddr(host)
+	if err != nil {
+		return "unknown"
+	}
+
+	if len(s.TrustedProxies) == 0 || !s.isTrusted(directAddr) {
+		return directAddr.String()
+	}
+
+	// Direct connection is from a trusted proxy: inspect X-Forwarded-For right-to-left.
+	rawHeaders := r.Header.Values("X-Forwarded-For")
+	if len(rawHeaders) == 0 {
+		return directAddr.String()
+	}
+
+	var ips []string
+	for _, raw := range rawHeaders {
+		for _, part := range strings.Split(raw, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				ips = append(ips, trimmed)
+			}
+		}
+	}
+
+	if len(ips) == 0 {
+		return directAddr.String()
+	}
+
+	// Bounded walk: inspect at most 20 entries to protect against oversized headers.
+	const maxHops = 20
+	if len(ips) > maxHops {
+		ips = ips[len(ips)-maxHops:]
+	}
+
+	current := directAddr
+	for i := len(ips) - 1; i >= 0; i-- {
+		token := ips[i]
+		if h, _, err := net.SplitHostPort(token); err == nil {
+			token = h
+		}
+		addr, err := netip.ParseAddr(token)
+		if err != nil {
+			// Malformed IP encountered in header: stop trusting further left.
+			break
+		}
+		current = addr
+		if !s.isTrusted(addr) {
+			// Found the first untrusted upstream hop.
+			return addr.String()
+		}
+	}
+	return current.String()
+}
+
+func (s Security) isTrusted(addr netip.Addr) bool {
+	addr = addr.Unmap()
+	for _, prefix := range s.TrustedProxies {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
 }
 
 // CSRFHeader carries the CSRF token on state-changing, session-authenticated requests.
@@ -102,13 +185,17 @@ type sendCodeResponse struct {
 	ChallengeID string `json:"challengeId"`
 }
 
+func (d Deps) clientIP(r *http.Request) string {
+	return d.Security.ClientIP(r)
+}
+
 func (d Deps) sendCode(w http.ResponseWriter, r *http.Request) {
 	var body sendCodeRequest
 	if err := decodeJSON(w, r, &body); err != nil {
 		d.writeDecodeProblem(w, r, err)
 		return
 	}
-	id, err := d.Auth.SendCode(r.Context(), body.Email, clientIP(r))
+	id, err := d.Auth.SendCode(r.Context(), body.Email, d.clientIP(r))
 	if err != nil {
 		d.authProblem(w, r, err, "send code")
 		return
@@ -136,7 +223,7 @@ func (d Deps) verifyCode(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(d.Security.CookieName); err == nil {
 		presented = c.Value
 	}
-	res, err := d.Auth.VerifyCode(r.Context(), body.ChallengeID, body.Code, clientIP(r), presented)
+	res, err := d.Auth.VerifyCode(r.Context(), body.ChallengeID, body.Code, d.clientIP(r), presented)
 	if err != nil {
 		d.authProblem(w, r, err, "verify code")
 		return

@@ -239,3 +239,62 @@ func TestEnvironmentRejectsUnknownValues(t *testing.T) {
 	_, err := Load(fakeEnv(map[string]string{EnvDatabaseURL: validDSNForAuth, EnvEnv: "staging"}))
 	assertSetting(t, err, EnvEnv)
 }
+
+func TestTrustedProxiesOptionalByDefault(t *testing.T) {
+	cfg, err := Load(fakeEnv(map[string]string{EnvDatabaseURL: validDSNForAuth}))
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if len(cfg.TrustedProxies) != 0 {
+		t.Fatalf("TrustedProxies = %v, want empty", cfg.TrustedProxies)
+	}
+
+	cfgEmpty, err := Load(fakeEnv(map[string]string{
+		EnvDatabaseURL:    validDSNForAuth,
+		EnvTrustedProxies: "   ",
+	}))
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if len(cfgEmpty.TrustedProxies) != 0 {
+		t.Fatalf("TrustedProxies = %v, want empty", cfgEmpty.TrustedProxies)
+	}
+}
+
+func TestTrustedProxiesParseCIDRsAndSingleIPs(t *testing.T) {
+	cfg, err := Load(fakeEnv(map[string]string{
+		EnvDatabaseURL:    validDSNForAuth,
+		EnvTrustedProxies: " 127.0.0.1/32, 10.0.0.0/8 , 192.168.1.5, ::1, 2001:db8::/32 ",
+	}))
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if len(cfg.TrustedProxies) != 5 {
+		t.Fatalf("got %d trusted proxies, want 5", len(cfg.TrustedProxies))
+	}
+	want := []string{"127.0.0.1/32", "10.0.0.0/8", "192.168.1.5/32", "::1/128", "2001:db8::/32"}
+	for i, w := range want {
+		if cfg.TrustedProxies[i].String() != w {
+			t.Errorf("TrustedProxies[%d] = %q, want %q", i, cfg.TrustedProxies[i].String(), w)
+		}
+	}
+}
+
+func TestTrustedProxiesRejectsInvalidEntries(t *testing.T) {
+	bad := []string{
+		"not-an-ip",
+		"127.0.0.1,,10.0.0.0/8",
+		"192.168.1.5/33",
+		"192.168.1.5/24", // host bits set
+		",127.0.0.1",
+		"127.0.0.1,",
+		strings.Repeat("127.0.0.1,", 300), // exceeds maxTrustedProxiesLen
+	}
+	for _, entry := range bad {
+		_, err := Load(fakeEnv(map[string]string{
+			EnvDatabaseURL:    validDSNForAuth,
+			EnvTrustedProxies: entry,
+		}))
+		assertSetting(t, err, EnvTrustedProxies)
+	}
+}

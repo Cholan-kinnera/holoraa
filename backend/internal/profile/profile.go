@@ -18,6 +18,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Cholan-kinnera/holoraa/backend/internal/store/dbstore"
 )
 
 // Limits. They match the database check constraints in migration 00002.
@@ -158,42 +160,55 @@ func hasControl(s string) bool {
 
 // Repo reads and writes profiles.
 type Repo struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	queries *dbstore.Queries
 }
 
 // NewRepo returns a profile repository.
-func NewRepo(pool *pgxpool.Pool) *Repo { return &Repo{pool: pool} }
+func NewRepo(pool *pgxpool.Pool) *Repo {
+	return &Repo{
+		pool:    pool,
+		queries: dbstore.New(pool),
+	}
+}
 
 // Me returns the profile of userID.
 func (r *Repo) Me(ctx context.Context, userID string) (Me, error) {
-	var m Me
-	err := r.pool.QueryRow(ctx,
-		`SELECT u.id::text, COALESCE(e.email, ''), u.username, u.display_name, u.bio, u.avatar_url
-		   FROM users u
-		   LEFT JOIN LATERAL (
-		       SELECT email FROM email_identities WHERE user_id = u.id ORDER BY created_at LIMIT 1
-		   ) e ON true
-		  WHERE u.id = $1`, userID).Scan(&m.ID, &m.Email, &m.Username, &m.DisplayName, &m.Bio, &m.AvatarURL)
+	row, err := r.queries.GetProfileMe(ctx, userID)
 	if err != nil {
 		return Me{}, fmt.Errorf("read profile: %w", err)
 	}
-	return m, nil
+	return Me{
+		ID:          row.ID,
+		Email:       row.Email,
+		Username:    row.Username,
+		DisplayName: row.DisplayName,
+		Bio:         row.Bio,
+		AvatarURL:   row.AvatarUrl,
+	}, nil
 }
 
 // Public returns the public profile for a username. The lookup is case-insensitive.
 func (r *Repo) Public(ctx context.Context, username string) (Public, error) {
 	u := strings.ToLower(strings.TrimSpace(username))
-	var p Public
-	err := r.pool.QueryRow(ctx,
-		`SELECT id::text, username, display_name, bio, avatar_url FROM users WHERE username = $1`,
-		u).Scan(&p.ID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL)
+	row, err := r.queries.GetPublicProfile(ctx, u)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Public{}, ErrNotFound
 	}
 	if err != nil {
 		return Public{}, fmt.Errorf("read public profile: %w", err)
 	}
-	return p, nil
+	uname := ""
+	if row.Username != nil {
+		uname = *row.Username
+	}
+	return Public{
+		ID:          row.ID,
+		Username:    uname,
+		DisplayName: row.DisplayName,
+		Bio:         row.Bio,
+		AvatarURL:   row.AvatarUrl,
+	}, nil
 }
 
 // Update applies a partial update to userID's profile. Validation runs before
