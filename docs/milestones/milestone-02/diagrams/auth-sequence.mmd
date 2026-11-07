@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    actor User as User Browser
+    participant Web as Next.js Web App (/sign-in)
+    participant Action as Server Actions (lib/auth/server.ts)
+    participant API as Go API (internal/auth)
+    participant DB as PostgreSQL (Neon)
+    participant Mail as Mailer (Resend / Fake)
+
+    %% Step 1: Send Code
+    User->>Web: Enter email (user@example.com)
+    Web->>Action: sendCodeAction(email)
+    Action->>API: POST /v1/auth/otp {email} (with Origin)
+    API->>DB: Check rate limits (5/hr email, 20/hr IP, 60s cooldown)
+    alt Rate Limit Exceeded
+        API-->>Action: 429 Too Many Requests (Retry-After)
+        Action-->>Web: Display error with cooldown
+    else Rate Limit OK
+        API->>DB: Insert email_otp_challenges (HMAC of code, 10m TTL)
+        API->>Mail: Send 6-digit code
+        API-->>Action: 202 Accepted {challengeId}
+        Action-->>Web: Render CodeStep (start 60s timer)
+    end
+
+    %% Step 2: Verify Code
+    User->>Web: Enter 6-digit code (849201)
+    Web->>Action: verifyCodeAction(challengeId, code)
+    Action->>API: POST /v1/auth/otp/verify {challengeId, code}
+    API->>DB: Lock challenge (SELECT FOR UPDATE), check attempts (< 5)
+    alt Invalid / Expired Code
+        API->>DB: Increment attempts + 1
+        API-->>Action: 401 Unauthorized (generic error)
+        Action-->>Web: Show "The code is invalid or has expired."
+    else Valid Code
+        API->>DB: Mark challenge consumed_at = now()
+        API->>DB: Find or create user & email_identities
+        API->>DB: Revoke only the presented session token (multi-device safe)
+        API->>DB: Insert sessions (SHA-256 token_hash, 14d sliding, 30d absolute)
+        API-->>Action: 200 OK {user} + Set-Cookie (HttpOnly, SameSite=Lax)
+        Action-->>Web: Apply cookies to Next.js host & redirect("/app")
+        Web-->>User: Navigate to /app
+    end
+
+    %% Step 3: Sign Out
+    User->>Web: Click Sign Out
+    alt Client Completely Offline
+        Web-->>User: Network error (HttpOnly cookie cannot be touched by client JS)
+    else Client Online
+        Web->>Action: signOutAction()
+        Action->>API: POST /v1/auth/logout (Cookie, Origin, X-CSRF-Token)
+        alt Go API Available
+            API->>DB: UPDATE sessions SET revoked_at = now()
+            API-->>Action: 204 No Content + Set-Cookie (Max-Age=0)
+            Action-->>Web: Set-Cookie (Max-Age=0) & redirect("/sign-in")
+        else Go API Unavailable
+            Action-->>Web: Set-Cookie (Max-Age=0) locally (DB unrevoked) & redirect("/sign-in")
+        end
+        Web-->>User: Cookie expired locally, render /sign-in
+    end

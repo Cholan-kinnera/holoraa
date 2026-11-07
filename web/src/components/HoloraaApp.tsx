@@ -35,10 +35,11 @@ import { RightOrbitRail } from './workspace/RightOrbitRail';
 
 
 export function HoloraaApp() {
-  useLenis();
-
   // Current view mode: landing page vs interactive 4-column web app
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
+
+  // Page-level smooth scrolling enabled only on landing page; disabled in workspace to prevent wheel capture
+  useLenis(currentView === 'landing');
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dms');
 
   // Application data states
@@ -418,7 +419,7 @@ export function HoloraaApp() {
           />
 
           {/* Column 2: Context Drawer */}
-          <div className={`${mobilePane === 'stage' ? 'hidden md:flex' : 'flex'} h-full shrink-0`}>
+          <div className={`${mobilePane === 'stage' ? 'hidden md:flex' : 'flex'} h-full shrink-0 min-h-0`}>
             <ContextDrawer
               activeTab={activeTab}
               chats={chats}
@@ -451,7 +452,7 @@ export function HoloraaApp() {
           </div>
 
           {/* Column 3: Main Stage */}
-          <div className={`${mobilePane === 'drawer' ? 'hidden md:flex' : 'flex'} flex-1 min-w-0 h-full`}>
+          <div className={`${mobilePane === 'drawer' ? 'hidden md:flex' : 'flex'} flex-1 min-w-0 min-h-0 h-full`}>
             <MainStage
               activeTab={activeTab}
               currentChat={currentChat}

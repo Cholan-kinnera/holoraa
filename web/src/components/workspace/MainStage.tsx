@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ConversationThread } from '../../lib/data/mock-data';
 import type { DirectoryUser, ThoughtRecord } from '../../lib/dsa/search-graph';
 import {
@@ -120,6 +120,46 @@ export function MainStage({
   const [cameraOn, setCameraOn] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef<boolean>(true);
+  const prevChatKeyRef = useRef<string>(activeChatKey);
+  const prevMessagesCountRef = useRef<number>(currentChat.messages.length);
+
+  // Track whether user is reading near bottom or scrolled up reading history
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const threshold = 120; // 120px from bottom considered near bottom
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isNearBottomRef.current = distanceFromBottom <= threshold;
+  }, []);
+
+  // Intelligent auto-scroll:
+  // 1. When switching chats: instantly reveal latest messages at bottom
+  // 2. When user sends message: smoothly scroll to bottom
+  // 3. When new message arrives: only auto-scroll if user was already near bottom (preserves reading position)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const chatChanged = prevChatKeyRef.current !== activeChatKey;
+    const messageAdded = currentChat.messages.length > prevMessagesCountRef.current;
+    const lastMessage = currentChat.messages[currentChat.messages.length - 1];
+    const isSelf = lastMessage?.self;
+
+    prevChatKeyRef.current = activeChatKey;
+    prevMessagesCountRef.current = currentChat.messages.length;
+
+    if (chatChanged) {
+      container.scrollTop = container.scrollHeight;
+      isNearBottomRef.current = true;
+    } else if (messageAdded) {
+      if (isSelf || isNearBottomRef.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        isNearBottomRef.current = true;
+      }
+    }
+  }, [activeChatKey, currentChat.messages]);
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,14 +208,14 @@ export function MainStage({
 
   return (
     <section
-      className="flex-1 min-w-0 h-full bg-oled-black flex flex-col overflow-hidden relative"
+      className="flex-1 min-w-0 min-h-0 h-full bg-oled-black flex flex-col overflow-hidden relative"
       aria-label="Main Workspace Content"
     >
       {/* =================================================================== */}
       {/* STAGE 1: CONVERSATION VIEW (DMS & CHANNELS)                         */}
       {/* =================================================================== */}
       {(activeTab === 'dms' || activeTab === 'spaces') && (
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
           {/* Horizon Header (56px) */}
           <header className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-black/85 backdrop-blur-md z-10">
             <div className="flex items-center gap-3 min-w-0">
@@ -256,8 +296,13 @@ export function MainStage({
           </header>
 
           {/* Centered Conversation Measure Container */}
-          <div className="flex-1 overflow-hidden flex flex-col justify-between">
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-between">
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6 overscroll-contain"
+              data-lenis-prevent
+            >
               <div className="max-w-3xl mx-auto w-full space-y-4">
                 {/* Empty State vs Active History */}
                 {currentChat.messages.length === 0 ? (
@@ -696,7 +741,7 @@ export function MainStage({
       {/* STAGE 2: THE SPOT (THOUGHTS STREAM & CALM ORBIT)                    */}
       {/* =================================================================== */}
       {activeTab === 'spot' && (
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden">
           {/* Horizon Header (56px) */}
           <header className="h-14 px-6 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-black/85 backdrop-blur-md z-10">
             <div className="flex items-center gap-3">
@@ -766,7 +811,7 @@ export function MainStage({
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-white/[0.07]">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/[0.07] overscroll-contain" data-lenis-prevent>
             {/* Centered Drop a Thought Composer */}
             <div className="p-5 sm:px-8 bg-oled-black">
               <div className="max-w-2xl mx-auto flex items-start gap-4">
@@ -993,7 +1038,7 @@ export function MainStage({
       {/* STAGE 3: MY PERSONAL ROOM (KNOCK WAITING ROOM & LIVE STAGE)        */}
       {/* =================================================================== */}
       {activeTab === 'room' && (
-        <div className="flex-1 flex flex-col h-full bg-oled-black justify-between relative overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col h-full bg-oled-black justify-between relative overflow-hidden">
           {/* Horizon Header (56px) */}
           <header className="h-14 px-6 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-black/85 backdrop-blur-md z-10">
             <div className="flex items-center gap-3">
@@ -1037,7 +1082,7 @@ export function MainStage({
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col justify-between">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col justify-between overscroll-contain" data-lenis-prevent>
             {/* Floating Glassmorphic Knock Notification */}
             {roomKnockActive && (
               <div className="my-2 mx-auto max-w-md w-full p-4 rounded-2xl bg-oled-elevated/95 backdrop-blur-xl hairline-border shadow-2xl flex items-center justify-between gap-4">

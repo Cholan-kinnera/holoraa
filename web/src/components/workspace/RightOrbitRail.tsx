@@ -79,7 +79,7 @@ export function RightOrbitRail({
 
   return (
     <aside
-      className="w-76 xl:w-80 h-full flex flex-col bg-oled-sidebar hairline-l shrink-0 z-10 transition-all duration-200"
+      className="w-76 xl:w-80 h-full flex flex-col bg-oled-sidebar hairline-l shrink-0 z-10 transition-all duration-200 min-h-0"
       aria-label="Orbit and Profile Sidebar"
     >
       {/* Horizon Header (56px) */}
@@ -104,7 +104,7 @@ export function RightOrbitRail({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-6 overscroll-contain" data-lenis-prevent>
         {/* Contextual Conversation Participant Details (when in DMs) */}
         {activeTab === 'dms' && activeChat && (
           <div className="space-y-4">

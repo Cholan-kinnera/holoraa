@@ -22,11 +22,15 @@ type captureSender struct {
 	mu   sync.Mutex
 	msgs []mail.Message
 	fail bool
+	err  error
 }
 
 func (c *captureSender) Send(_ context.Context, m mail.Message) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.err != nil {
+		return c.err
+	}
 	if c.fail {
 		return errors.New("provider unavailable")
 	}
@@ -234,7 +238,7 @@ func TestFailedVerificationsLimitPerClientAddress(t *testing.T) {
 	}
 }
 
-func TestSendFailureRecordsNothing(t *testing.T) {
+func TestSendFailureDeletesChallengeAndPreservesRateLimit(t *testing.T) {
 	s, pool, sender := newTestService(t)
 	sender.fail = true
 
@@ -249,8 +253,32 @@ func TestSendFailureRecordsNothing(t *testing.T) {
 	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM auth_events`).Scan(&events); err != nil {
 		t.Fatal(err)
 	}
-	if challenges != 0 || events != 0 {
-		t.Fatalf("rows after failed send: challenges=%d events=%d, want 0 and 0", challenges, events)
+	// Under DEC-M2-01: Challenge is invalidated upon definitive failure, but rate-limit audit
+	// record in auth_events is preserved to prevent denial-of-wallet / flood attacks.
+	if challenges != 0 || events != 1 {
+		t.Fatalf("rows after failed send: challenges=%d events=%d, want 0 and 1", challenges, events)
+	}
+}
+
+func TestSendAmbiguousTimeoutPreservesChallengeAndRateLimit(t *testing.T) {
+	s, pool, sender := newTestService(t)
+	sender.err = mail.ErrAmbiguousDelivery
+
+	_, err := s.SendCode(context.Background(), "timeout@example.test", "192.0.2.41")
+	if !errors.Is(err, ErrSendFailed) {
+		t.Fatalf("error = %v, want ErrSendFailed", err)
+	}
+	var challenges, events int
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM email_otp_challenges`).Scan(&challenges); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM auth_events`).Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	// Under DEC-M2-01: In ambiguous timeout, challenge is preserved until expiry so that
+	// if the email did get dispatched, user can still verify their code.
+	if challenges != 1 || events != 1 {
+		t.Fatalf("rows after ambiguous send timeout: challenges=%d events=%d, want 1 and 1", challenges, events)
 	}
 }
 

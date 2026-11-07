@@ -9,7 +9,15 @@
 // expires.
 package mail
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrAmbiguousDelivery indicates that the delivery request timed out or experienced
+// a network interruption after the request was dispatched. Delivery status cannot be
+// known with certainty (the upstream provider may have accepted and delivered the email).
+var ErrAmbiguousDelivery = errors.New("ambiguous delivery status")
 
 // Message is one outgoing email. Text is the plain-text body.
 type Message struct {

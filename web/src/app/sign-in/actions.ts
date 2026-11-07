@@ -15,6 +15,12 @@ export interface VerifyCodeState {
   error: string | null;
 }
 
+export interface ResendCodeState {
+  challengeId: string | null;
+  error: string | null;
+  success: boolean;
+}
+
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /** Step 1: asks the API to send a code. The response is the same for known and unknown addresses. */
@@ -73,4 +79,24 @@ export async function verifyCodeAction(_previous: VerifyCodeState, formData: For
   }
   await applyCookies(result.cookies);
   redirect("/app");
+}
+
+/** Resends a code to the current email and returns the new challenge ID. */
+export async function resendCodeAction(_previous: ResendCodeState, formData: FormData): Promise<ResendCodeState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const invalid = validateEmail(email);
+  if (invalid !== null) {
+    return { challengeId: null, error: invalid, success: false };
+  }
+
+  const context = await requestContext();
+  if (!context.ok) {
+    return { challengeId: null, error: context.message, success: false };
+  }
+
+  const result = await sendCode(context.client, context.origin, email);
+  if (!result.ok) {
+    return { challengeId: null, error: result.message, success: false };
+  }
+  return { challengeId: result.challengeId, error: null, success: true };
 }

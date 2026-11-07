@@ -232,6 +232,9 @@ The project tracks execution against approved milestone gates in [`docs/MILESTON
 - [x] **M2: Health, Readiness, PostgreSQL & goose** — `/v1/health`, `/v1/ready`, goose forward-only migrations.
 - [x] **M3: sqlc Integration & D11 Trusted Proxy** — Type-safe queries, CIDR proxy filtering.
 - [x] **Frontend Refinement (Phases 1–6)** — Responsive 4-column OLED workspace, messages stream, The Spot, personal rooms, 0.2ms mutual search trie, Lenis smooth scrolling, strict CSP.
+- [x] **F1 Milestone 1: Workspace Scrolling** — Scoped Lenis lifecycle to landing page only, eliminated wheel capture in workspace, added `min-h-0` flex nesting, `overscroll-contain`, and reading-position-preserving intelligent conversation auto-scroll across all 4 columns.
+- [ ] **F1 Milestone 2: Authentication Foundation** — Refined passwordless OTP UX, responsive form layout, enhanced loading and error states without changing the backend API contract.
+- [ ] **F1 Milestone 3: Personal Rooms Stage** — Polished participant audio tiles, active speaker green glow, knock banner, and floating call dock.
 - [ ] **M4: Contracts Generator Spike (D9)** — Pin OpenAPI 3.1.1 and JSON Schema validators, Makefile generator drift checks.
 - [ ] **M5: Web Integration & Validation** — Connect frontend client to backend endpoints via generated schema client.
 - [ ] **M6: Realtime WebSocket Pipeline** — WebSocket event hub with `github.com/coder/websocket`.
