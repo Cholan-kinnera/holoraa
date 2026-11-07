@@ -1,0 +1,47 @@
+graph TD
+    subgraph Client ["Client Device (Desktop / Tablet / Mobile)"]
+        Browser["Web Browser (React 19 / DOM)"]
+    end
+
+    subgraph FrontendPlatform ["Frontend Hosting (Vercel / Render)"]
+        EdgeProxy["Next.js Proxy / Middleware (Nonce CSP)"]
+        SignInRoute["/sign-in (Server Component)"]
+        ServerActions["Server Actions (sendCode / verifyCode)"]
+        WorkspaceGate["/app Session Gate (app/layout.tsx)"]
+    end
+
+    subgraph BackendPlatform ["Backend Hosting (Render Web Service)"]
+        ChiMux["Chi Router (/v1)"]
+        SecurityMW["Security Middleware (Origin, CSRF, Session)"]
+        AuthModule["internal/auth.Service"]
+        MailModule["internal/mail.Sender"]
+    end
+
+    subgraph DatabasePlatform ["Database (Neon PostgreSQL 17)"]
+        Users["users"]
+        EmailIdentities["email_identities"]
+        Challenges["email_otp_challenges"]
+        Sessions["sessions"]
+        AuthEvents["auth_events"]
+    end
+
+    subgraph ExternalServices ["External Infrastructure"]
+        ResendAPI["Resend Email API"]
+    end
+
+    Browser -->|HTTPS| EdgeProxy
+    EdgeProxy --> SignInRoute
+    SignInRoute --> ServerActions
+    ServerActions -->|Forwarded Request + Origin| ChiMux
+    WorkspaceGate -->|Internal getSession()| ChiMux
+
+    ChiMux --> SecurityMW
+    SecurityMW --> AuthModule
+    AuthModule --> MailModule
+    MailModule -->|HTTP POST (API Key)| ResendAPI
+
+    AuthModule --> Users
+    AuthModule --> EmailIdentities
+    AuthModule --> Challenges
+    AuthModule --> Sessions
+    AuthModule --> AuthEvents

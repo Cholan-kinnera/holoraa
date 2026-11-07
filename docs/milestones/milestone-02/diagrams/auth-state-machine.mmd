@@ -1,0 +1,35 @@
+stateDiagram-v2
+    [*] --> Idle: Browser arrives at /sign-in
+
+    state ClientAuthState {
+        Idle --> EmailSubmitting: User submits email
+        EmailSubmitting --> Idle: Client validation error
+        EmailSubmitting --> CodePending: 202 Accepted {challengeId}
+
+        CodePending --> ResendCooldown: Timer active (60s)
+        ResendCooldown --> ResendAvailable: Timer expires (0s)
+        ResendAvailable --> EmailSubmitting: User requests resend
+
+        CodePending --> Idle: User clicks "Use a different email"
+        CodePending --> CodeVerifying: User submits 6 digits
+        CodeVerifying --> CodePending: 401 Unauthorized (attempts < 5)
+        CodeVerifying --> ChallengeLocked: 401 Unauthorized (attempts >= 5)
+        ChallengeLocked --> Idle: Prompt to restart
+    }
+
+    state ChallengeLifecycle {
+        Created --> Active: Stored as HMAC, TTL 10m
+        Active --> Consumed: Valid code submitted
+        Active --> Locked: 5 failed verification attempts
+        Active --> Expired: Elapsed time > 10m
+    }
+
+    state SessionLifecycle {
+        SessionCreated --> SessionActive: SHA-256 token hash in DB
+        SessionActive --> SessionActive: Sliding idle refreshed on use (+14d)
+        SessionActive --> SessionRevoked: Explicit logout or session rotation
+        SessionActive --> SessionExpired: Absolute expiry reached (30d)
+    }
+
+    CodeVerifying --> Authenticated: 200 OK + Set-Cookie
+    Authenticated --> [*]: Redirect to /app

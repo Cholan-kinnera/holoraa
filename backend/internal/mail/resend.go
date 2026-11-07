@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 )
@@ -13,9 +15,9 @@ import (
 // DefaultResendURL is the Resend email endpoint.
 const DefaultResendURL = "https://api.resend.com/emails"
 
-// resendTimeout bounds one send. It is shorter than the request timeout so a
-// slow provider cannot hold a request open.
-const resendTimeout = 10 * time.Second
+// resendTimeout bounds one send. It is kept short (5s per DEC-M2-01) so a
+// slow provider does not tie up resources.
+const resendTimeout = 5 * time.Second
 
 // Resend sends mail through the Resend HTTP API. It is used only when the
 // configuration selects it, and it needs an API key and a verified sender.
@@ -66,6 +68,13 @@ func (r *Resend) Send(ctx context.Context, m Message) error {
 
 	resp, err := r.Client.Do(req)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("%w: transport timeout", ErrAmbiguousDelivery)
+		}
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return fmt.Errorf("%w: transport timeout", ErrAmbiguousDelivery)
+		}
 		// The transport error can contain the URL but not the key. It is still
 		// reduced to a fixed message.
 		return fmt.Errorf("send email: transport error")

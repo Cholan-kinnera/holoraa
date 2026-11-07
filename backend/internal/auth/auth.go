@@ -131,8 +131,19 @@ func (s *Service) SendCode(ctx context.Context, rawEmail, clientIP string) (stri
 		return "", fmt.Errorf("insert challenge: %w", err)
 	}
 
-	// Delivery happens before commit. If it fails, nothing is recorded and the
-	// caller can retry without using up a send.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO auth_events (kind, ip_hash, email_hash) VALUES ('otp_sent', $1, $2)`,
+		ipKey, emailKey); err != nil {
+		return "", fmt.Errorf("record send: %w", err)
+	}
+
+	// DEC-M2-01: Commit database transaction before external mail delivery to release
+	// connection pool slot immediately and avoid holding locks during network I/O.
+	if err := tx.Commit(ctx); err != nil {
+		return "", fmt.Errorf("commit send: %w", err)
+	}
+
+	// External dispatch executed outside the database transaction.
 	msg := mail.Message{
 		To:      email,
 		Subject: "Your Holoraa sign-in code",
@@ -141,18 +152,19 @@ func (s *Service) SendCode(ctx context.Context, rawEmail, clientIP string) (stri
 			code, int(CodeLifetime.Minutes())),
 	}
 	if err := s.mail.Send(ctx, msg); err != nil {
-		// The provider error is not returned: it can name the provider and status.
+		// If delivery status is ambiguous (transport timeout / network interruption),
+		// preserve the challenge until expiry so the code can still be verified if delivered.
+		if errors.Is(err, mail.ErrAmbiguousDelivery) {
+			return "", ErrSendFailed
+		}
+
+		// Definitive failure: provider rejected or connection refused. Invalidate the challenge
+		// so an undelivered code does not linger. Rate-limit audit record in auth_events is
+		// preserved to protect against repeated send abuse.
+		_, _ = s.pool.Exec(ctx, `DELETE FROM email_otp_challenges WHERE id = $1`, challengeID)
 		return "", ErrSendFailed
 	}
 
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO auth_events (kind, ip_hash, email_hash) VALUES ('otp_sent', $1, $2)`,
-		ipKey, emailKey); err != nil {
-		return "", fmt.Errorf("record send: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return "", fmt.Errorf("commit send: %w", err)
-	}
 	return challengeID, nil
 }
 

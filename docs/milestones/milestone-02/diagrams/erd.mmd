@@ -1,0 +1,45 @@
+erDiagram
+    USERS ||--o{ EMAIL_IDENTITIES : "signs in with"
+    USERS ||--o{ SESSIONS : "holds"
+    USERS {
+        uuid id PK "gen_random_uuid()"
+        text username "unique, lowercase, nullable until profile setup"
+        text display_name "1-64 chars"
+        text bio "up to 300 chars"
+        text avatar_url "https URL up to 2048 chars"
+        timestamptz created_at "default now()"
+        timestamptz updated_at "default now()"
+    }
+    EMAIL_IDENTITIES {
+        text email PK "normalized, lowercase, 3-254 chars"
+        uuid user_id FK "references users(id) on delete cascade"
+        timestamptz created_at "default now()"
+        timestamptz verified_at "default now()"
+    }
+    EMAIL_OTP_CHALLENGES {
+        uuid id PK "gen_random_uuid()"
+        text email "normalized, lowercase"
+        bytea code_mac "HMAC-SHA256(secret, challenge_id + code)"
+        smallint attempts "default 0, locked at 5"
+        timestamptz expires_at "created_at + 10m"
+        timestamptz consumed_at "nullable, set on success"
+        bytea ip_hash "HMAC-SHA256(secret, client_ip)"
+        timestamptz created_at "default now()"
+    }
+    SESSIONS {
+        uuid id PK "gen_random_uuid()"
+        uuid user_id FK "references users(id) on delete cascade"
+        bytea token_hash UK "SHA-256 of raw 32-byte token"
+        timestamptz created_at "default now()"
+        timestamptz last_seen_at "updated on use (throttled 5m)"
+        timestamptz idle_expires_at "now() + 14d, sliding"
+        timestamptz absolute_expires_at "now() + 30d, hard ceiling"
+        timestamptz revoked_at "nullable, set on logout/rotation"
+    }
+    AUTH_EVENTS {
+        bigint id PK "generated always as identity"
+        text kind "otp_sent or verify_failed"
+        bytea ip_hash "HMAC-SHA256(secret, client_ip)"
+        bytea email_hash "HMAC-SHA256(secret, email)"
+        timestamptz created_at "default now()"
+    }
