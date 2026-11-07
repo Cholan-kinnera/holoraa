@@ -448,7 +448,12 @@ func TestNormalizeEmailAcceptsAndRejects(t *testing.T) {
 			t.Fatalf("NormalizeEmail(%q) = %q, %v; want %q", in, got, err, want)
 		}
 	}
-	for _, in := range []string{"", "x", "a@b", "a@@b.test", strings.Repeat("a", 65) + "@example.test"} {
+	for _, in := range []string{
+		"", "x", "a@b", "a@@b.test", strings.Repeat("a", 65) + "@example.test",
+		`"a b"@example.test`, `"a"@example.test`, "a,b@example.test", "<a>@example.test",
+		"a(b)@example.test", "a@ex ample.test", "a@exa_mple.test", "a@.test", "a@example.t",
+		"a@xn--p1ai", "a..b@example.test", ".a@example.test", "a\\b@example.test",
+	} {
 		if _, err := NormalizeEmail(in); !errors.Is(err, ErrMalformed) {
 			t.Fatalf("NormalizeEmail(%q) = %v, want ErrMalformed", in, err)
 		}

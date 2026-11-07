@@ -41,8 +41,9 @@ export function buildContentSecurityPolicy(nonce: string, { isDev }: PolicyOptio
     ["default-src", ["'self'"]],
     ["script-src", scriptSrc],
     ["style-src", ["'self'", `'nonce-${nonce}'`]],
-    ["img-src", ["'self'", "data:"]],
+    ["img-src", ["'self'", "data:", "https://images.unsplash.com"]],
     ["font-src", ["'self'"]],
+
     ["connect-src", ["'self'"]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],

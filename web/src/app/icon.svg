@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254">
+  <rect width="1254" height="1254" rx="260" fill="#0a0a0d"/>
+  <g transform="translate(127 127) scale(0.8)">
+  <defs>
+    <linearGradient id="hl-cyan" x1="360" y1="395" x2="500" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8ff3ff"/>
+      <stop offset="1" stop-color="#2fb6ff"/>
+    </linearGradient>
+    <linearGradient id="hl-warm" x1="735" y1="420" x2="888" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd58a"/>
+      <stop offset="0.55" stop-color="#ff9a7a"/>
+      <stop offset="1" stop-color="#ff6fb5"/>
+    </linearGradient>
+    <linearGradient id="hl-ribbon" x1="420" y1="600" x2="830" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3d6bff"/>
+      <stop offset="0.5" stop-color="#b86bff"/>
+      <stop offset="1" stop-color="#ffb07a"/>
+    </linearGradient>
+    <linearGradient id="hl-head-a" x1="370" y1="265" x2="492" y2="385" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b6f7ff"/>
+      <stop offset="1" stop-color="#4fd2ff"/>
+    </linearGradient>
+    <linearGradient id="hl-head-b" x1="740" y1="300" x2="852" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe2b0"/>
+      <stop offset="1" stop-color="#ff86b8"/>
+    </linearGradient>
+    <filter id="hl-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="22" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#hl-glow)">
+    <!-- Left figure: head and body -->
+    <circle cx="431" cy="325" r="62" fill="url(#hl-head-a)"/>
+    <rect x="360" y="395" width="140" height="365" rx="70" fill="url(#hl-cyan)"/>
+
+    <!-- Right figure: head and body -->
+    <circle cx="796" cy="355" r="57" fill="url(#hl-head-b)"/>
+    <rect x="735" y="420" width="153" height="340" rx="76" fill="url(#hl-warm)"/>
+
+    <!-- Connecting ribbon: one curved band from the left shoulder into the right waist -->
+    <path fill="url(#hl-ribbon)" opacity="0.94"
+      d="M470 440 C560 470 620 540 720 548 C768 552 800 552 830 560 C800 610 760 640 700 640 C640 640 600 610 500 690 C470 640 470 600 470 440 Z"/>
+  </g>
+
+  <!-- Sparkle -->
+  <path fill="#ffe7a8" d="M910 268 C916 300 925 312 952 320 C925 328 916 340 910 375 C904 340 895 328 868 320 C895 312 904 300 910 268 Z"/>
+
+  </g>
+</svg>

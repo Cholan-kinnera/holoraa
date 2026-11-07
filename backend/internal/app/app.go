@@ -62,6 +62,7 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 				CookieName:     cfg.CookieName,
 				CookieSecure:   cfg.CookieSecure,
 				AllowedOrigins: cfg.AllowedOrigins,
+				TrustedProxies: cfg.TrustedProxies,
 			},
 		}),
 		ReadHeaderTimeout: readHeaderTimeout,

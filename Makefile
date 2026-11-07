@@ -17,6 +17,9 @@ GOTOOLCHAIN ?= local
 export GOTOOLCHAIN
 GOFMT       ?= $(shell $(GO) env GOROOT)/bin/gofmt
 
+SQLC          ?= $(shell which sqlc 2>/dev/null || echo $(HOME)/go/bin/sqlc)
+SQLC_REQUIRED := v1.28.0
+
 VERSION ?= 0.0.0-dev
 # RAW_VERSION is the value exactly as given. Make expands $-references in
 # VERSION itself, so validation must look at the raw text, not at VERSION.
@@ -26,9 +29,9 @@ export VERSION
 MODULE  := github.com/Cholan-kinnera/holoraa/backend
 LDFLAGS := -X $(MODULE)/internal/version.Version=$(VERSION)
 
-.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db web-install web-check contract-check check-all e2e
+.PHONY: check toolchain-check validate-version fmt-check vet test build clean dev-env db-up db-down db-status migrate-up migrate-down migrate-status test-db web-install web-check contract-check check-all e2e sqlc-gen sqlc-check
 
-check: toolchain-check validate-version fmt-check vet test build
+check: toolchain-check validate-version fmt-check vet test sqlc-check build
 	./bin/api -version
 
 toolchain-check:
@@ -53,6 +56,15 @@ build: toolchain-check validate-version
 
 clean:
 	rm -rf bin
+
+# sqlc targets. Version is pinned to $(SQLC_REQUIRED).
+sqlc-gen:
+	$(SQLC) generate
+
+sqlc-check:
+	@v="$$($(SQLC) version 2>/dev/null)" && [ "$$v" = "$(SQLC_REQUIRED)" ] || { echo "need $(SQLC_REQUIRED) as SQLC, found '$$v' from SQLC=$(SQLC)"; exit 1; }
+	@$(SQLC) generate
+	@git diff --exit-code -- backend/internal/store/dbstore || { echo "sqlc generated code is out of date: run make sqlc-gen and commit the result"; exit 1; }
 
 # Local development database (PostgreSQL only). See docs/engineering/LOCAL_SETUP.md.
 # The compose file reads variables from .env in the repository root, so

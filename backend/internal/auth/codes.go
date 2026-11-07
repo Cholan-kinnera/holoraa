@@ -12,6 +12,13 @@ import (
 
 // Input shapes. Every external input is checked here before use.
 var (
+	// Bare addr-spec only: RFC 5322 dot-atom local part and LDH domain labels
+	// with a letters-only top level. Quoted local parts, comments, display
+	// names, and IDN labels are refused, so the value sent to a provider is
+	// exactly the address that was validated.
+	localPartPattern = regexp.MustCompile(`^[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+)*$`)
+	domainPattern    = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`)
+
 	uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 	codePattern = regexp.MustCompile(`^[0-9]{6}$`)
 )
@@ -19,24 +26,23 @@ var (
 // codeModulus gives six decimal digits.
 var codeModulus = big.NewInt(1000000)
 
-// NormalizeEmail trims and lowercases an address and checks its shape. It is a
-// shape check only: deliverability is not tested. The result is the key used
-// for accounts, rate limits, and delivery.
+// NormalizeEmail trims and lowercases an address and accepts only a bare
+// addr-spec. It is a shape check only: deliverability is not tested. The
+// result is the key used for accounts, rate limits, and delivery.
 func NormalizeEmail(raw string) (string, error) {
 	e := strings.ToLower(strings.TrimSpace(raw))
 	if len(e) < 3 || len(e) > 254 {
 		return "", ErrMalformed
 	}
-	if strings.ContainsAny(e, " \t\r\n") || strings.Count(e, "@") != 1 {
+	at := strings.LastIndexByte(e, '@')
+	if at < 1 || strings.Count(e, "@") != 1 {
 		return "", ErrMalformed
 	}
-	at := strings.IndexByte(e, '@')
 	local, domain := e[:at], e[at+1:]
-	if local == "" || len(local) > 64 || domain == "" {
+	if len(local) > 64 || !localPartPattern.MatchString(local) {
 		return "", ErrMalformed
 	}
-	if !strings.Contains(domain, ".") || strings.HasPrefix(domain, ".") ||
-		strings.HasSuffix(domain, ".") || strings.Contains(domain, "..") {
+	if !domainPattern.MatchString(domain) {
 		return "", ErrMalformed
 	}
 	return e, nil

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/room.knock.v1.json",
+  "title": "RoomKnockEvent",
+  "description": "Realtime notification delivered to the room host when a guest knocks to enter a locked or waiting-room enabled personal room. Transport: Server-to-client over authenticated WebSocket. Visibility: Room host only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "id", "data"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "room.knock"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUIDv7) for server-side deduplication and ordering."
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["knockId", "roomSlug", "guest", "knockedAt"],
+      "properties": {
+        "knockId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ephemeral challenge ID used by host to approve or decline the knock request."
+        },
+        "roomSlug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,31}$",
+          "description": "Target personal room slug."
+        },
+        "guest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "username", "displayName", "avatarUrl"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "username": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{2,31}$"
+            },
+            "displayName": {
+              "type": ["string", "null"],
+              "maxLength": 64
+            },
+            "avatarUrl": {
+              "type": ["string", "null"],
+              "maxLength": 2048
+            }
+          }
+        },
+        "knockedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the knock was registered."
+        }
+      }
+    }
+  }
+}

@@ -34,3 +34,6 @@ web/next-env.d.ts
 
 # Local-only data: mail outbox and scratch files. Never committed.
 .local/
+
+# Local temporary visual test captures (anchored to root only)
+/screenshot_*.png

@@ -73,7 +73,7 @@ stop_web() {
 
 # Prints the two state words the page renders: API, then Database.
 page_states() {
-  curl -s --max-time 10 "http://127.0.0.1:$WEB_PORT/" | grep -oE 'class="state">[^<]*' | sed 's/class="state">//' | tr '\n' '|'
+  curl -s --max-time 10 "http://127.0.0.1:$WEB_PORT/status" | grep -oE 'class="state">[^<]*' | sed 's/class="state">//' | tr '\n' '|'
 }
 
 expect() {
@@ -151,19 +151,34 @@ else
 fi
 rm -f "$hdr_file" "$html_file"
 
-# Real browser: the page must render the states and log no CSP violation.
+# Real browser: the status page must render the states, and the landing page
+# must render its heading. Neither may log a CSP violation.
 browser="${HOLORAA_E2E_BROWSER:-google-chrome-stable}"
 if command -v "$browser" >/dev/null 2>&1; then
   profile="$(mktemp -d)"
   timeout 90 "$browser" --headless=new --disable-gpu --no-first-run --user-data-dir="$profile" \
     --enable-logging=stderr --v=0 --virtual-time-budget=8000 --dump-dom \
-    "http://127.0.0.1:$WEB_PORT/" > "$profile/dom.html" 2> "$profile/console.log"
+    "http://127.0.0.1:$WEB_PORT/status" > "$profile/dom.html" 2> "$profile/console.log"
   rendered="$(grep -oE 'class="state">[^<]*' "$profile/dom.html" | sed 's/class="state">//' | tr '\n' '|')"
   violations="$(grep -ci 'Content Security Policy' "$profile/console.log")"
   if [ "$rendered" = "Working|Working|" ] && [ "$violations" -eq 0 ]; then
-    echo "PASS browser: rendered '$rendered' with 0 CSP violations"
+    echo "PASS browser status: rendered '$rendered' with 0 CSP violations"
   else
-    echo "FAIL browser: rendered '$rendered', CSP violations $violations"
+    echo "FAIL browser status: rendered '$rendered', CSP violations $violations"
+    failures=$((failures + 1))
+  fi
+  rm -rf "$profile"
+
+  profile="$(mktemp -d)"
+  timeout 90 "$browser" --headless=new --disable-gpu --no-first-run --user-data-dir="$profile" \
+    --enable-logging=stderr --v=0 --virtual-time-budget=8000 --dump-dom \
+    "http://127.0.0.1:$WEB_PORT/" > "$profile/dom.html" 2> "$profile/console.log"
+  heading="$(grep -c '<h1 class="hero__title"' "$profile/dom.html")"
+  violations="$(grep -ci 'Content Security Policy' "$profile/console.log")"
+  if [ "$heading" -eq 1 ] && [ "$violations" -eq 0 ]; then
+    echo "PASS browser landing: hero heading rendered with 0 CSP violations"
+  else
+    echo "FAIL browser landing: hero headings $heading, CSP violations $violations"
     failures=$((failures + 1))
   fi
   rm -rf "$profile"

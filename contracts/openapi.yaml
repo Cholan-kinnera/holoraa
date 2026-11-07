@@ -255,6 +255,319 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/thoughts:
+    get:
+      operationId: getThoughts
+      summary: List thoughts
+      description: Returns a chronologically cursor-paginated list of thoughts from followed users and the calm graph.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [foryou, following, media]
+            default: foryou
+        - name: q
+          in: query
+          required: false
+          description: Search term matched against thoughts text via PostgreSQL tsvector full-text search.
+          schema:
+            type: string
+            maxLength: 100
+        - name: before
+          in: query
+          required: false
+          description: UUIDv7 cursor for backward chronological pagination.
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: A page of thoughts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThoughtsListResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createThought
+      summary: Post a new thought
+      description: Publishes a spontaneous thought or status update to The Spot.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateThoughtRequest"
+      responses:
+        "201":
+          description: Thought successfully published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThoughtResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/thoughts/{id}/likes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: likeThought
+      summary: Like a thought
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Like recorded.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: unlikeThought
+      summary: Unlike a thought
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Like removed.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/users/notes:
+    get:
+      operationId: getActiveNotes
+      summary: Get active notes
+      description: Returns ephemeral 24-hour status notes of followed accounts and active orbit connections.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Active status notes list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserNote"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/note:
+    put:
+      operationId: setMyNote
+      summary: Set 24-hour status note
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetNoteRequest"
+      responses:
+        "200":
+          description: Note updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserNote"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: clearMyNote
+      summary: Clear own status note
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Note cleared.
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/settings:
+    get:
+      operationId: getMySettings
+      summary: Get user settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: User privacy and notification settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateMySettings
+      summary: Update user settings
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserSettingsRequest"
+      responses:
+        "200":
+          description: Updated settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/rooms/{slug}:
+    get:
+      operationId: getPersonalRoom
+      summary: Get personal room state
+      description: Returns room configuration, lock state, and waiting room requirement for the slug.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z][a-z0-9_]{2,31}$"
+      responses:
+        "200":
+          description: Personal room details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalRoom"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/follows/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: followUser
+      summary: Follow user
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Successfully followed.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: unfollowUser
+      summary: Unfollow user
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Successfully unfollowed.
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/social/orbit:
+    get:
+      operationId: getOrbitRecommendations
+      summary: Get orbit recommendations
+      description: Computes 2-hop mutual recommendations ordered by mutual connection density.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        "200":
+          description: Orbit suggestions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrbitRecommendation"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   securitySchemes:
     sessionCookie:
@@ -434,3 +747,161 @@ components:
         instance:
           type: string
           description: The request path that produced the problem. Never includes the query string.
+    Thought:
+      type: object
+      additionalProperties: false
+      required: [id, author, text, mood, photoUrl, likesCount, likedByMe, repliesCount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: "#/components/schemas/PublicProfile"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 280
+        mood:
+          type: [string, "null"]
+          maxLength: 32
+        photoUrl:
+          type: [string, "null"]
+          maxLength: 2048
+        likesCount:
+          type: integer
+          minimum: 0
+        likedByMe:
+          type: boolean
+        repliesCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+    CreateThoughtRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 280
+        mood:
+          type: [string, "null"]
+          maxLength: 32
+        photoUrl:
+          type: [string, "null"]
+          maxLength: 2048
+        syncToNote:
+          type: boolean
+          default: false
+    ThoughtResponse:
+      type: object
+      additionalProperties: false
+      required: [thought]
+      properties:
+        thought:
+          $ref: "#/components/schemas/Thought"
+    ThoughtsListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Thought"
+        nextCursor:
+          type: [string, "null"]
+          format: uuid
+    UserNote:
+      type: object
+      additionalProperties: false
+      required: [userId, username, displayName, avatarUrl, text, expiresAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+        displayName:
+          type: [string, "null"]
+        avatarUrl:
+          type: [string, "null"]
+        text:
+          type: string
+          minLength: 1
+          maxLength: 60
+        expiresAt:
+          type: string
+          format: date-time
+    SetNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 60
+    UserSettings:
+      type: object
+      additionalProperties: false
+      required: [readReceiptsEnabled, activeStatusEnabled, quietHoursEnabled, quietHoursStart, quietHoursEnd]
+      properties:
+        readReceiptsEnabled:
+          type: boolean
+        activeStatusEnabled:
+          type: boolean
+        quietHoursEnabled:
+          type: boolean
+        quietHoursStart:
+          type: [string, "null"]
+        quietHoursEnd:
+          type: [string, "null"]
+    UpdateUserSettingsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        readReceiptsEnabled:
+          type: boolean
+        activeStatusEnabled:
+          type: boolean
+        quietHoursEnabled:
+          type: boolean
+        quietHoursStart:
+          type: [string, "null"]
+        quietHoursEnd:
+          type: [string, "null"]
+    PersonalRoom:
+      type: object
+      additionalProperties: false
+      required: [slug, host, isLocked, waitingRoomEnabled]
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+        host:
+          $ref: "#/components/schemas/PublicProfile"
+        isLocked:
+          type: boolean
+        waitingRoomEnabled:
+          type: boolean
+    OrbitRecommendation:
+      type: object
+      additionalProperties: false
+      required: [user, mutualsCount, mutualSample, isFollowing]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicProfile"
+        mutualsCount:
+          type: integer
+          minimum: 0
+        mutualSample:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicProfile"
+        isFollowing:
+          type: boolean

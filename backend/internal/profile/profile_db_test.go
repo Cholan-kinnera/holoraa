@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Cholan-kinnera/holoraa/backend/internal/store/dbstore"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/testdb"
 )
 
@@ -12,16 +13,17 @@ import (
 // happens at sign-in; tests insert the row directly.
 func newUser(t *testing.T, repo *Repo, email string) string {
 	t.Helper()
-	pool := repo.pool
-	var id string
-	if err := pool.QueryRow(context.Background(), `INSERT INTO users DEFAULT VALUES RETURNING id::text`).Scan(&id); err != nil {
+	user, err := repo.queries.CreateUser(context.Background())
+	if err != nil {
 		t.Fatalf("insert user: %v", err)
 	}
-	if _, err := pool.Exec(context.Background(),
-		`INSERT INTO email_identities (email, user_id) VALUES ($1, $2)`, email, id); err != nil {
+	if _, err := repo.queries.CreateEmailIdentity(context.Background(), dbstore.CreateEmailIdentityParams{
+		Email:  email,
+		UserID: user.ID,
+	}); err != nil {
 		t.Fatalf("insert identity: %v", err)
 	}
-	return id
+	return user.ID
 }
 
 func setUsername(v string) Patch {
