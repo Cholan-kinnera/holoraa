@@ -76,14 +76,14 @@ export function ContextDrawer({
 
   return (
     <section
-      className="w-76 xl:w-80 h-full bg-oled-sidebar hairline-r flex flex-col justify-between shrink-0 overflow-hidden z-10"
+      className="w-76 xl:w-80 h-full bg-oled-sidebar hairline-r flex flex-col justify-between shrink-0 overflow-hidden z-10 min-h-0"
       aria-label="Navigation and Context Drawer"
     >
       {/* ------------------------------------------------------------------- */}
       {/* SIDEBAR A: DIRECT MESSAGES & INSTAGRAM-STYLE NOTES TRAY             */}
       {/* ------------------------------------------------------------------- */}
       {(activeTab === 'dms' || activeTab === 'room') && (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden min-h-0">
           {/* Horizon Header (56px) */}
           <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
             <h2 className="font-semibold text-base text-white tracking-tight">Messages</h2>
@@ -139,7 +139,7 @@ export function ContextDrawer({
 
           {/* Instagram-Style Horizontal Notes Tray */}
           <div className="px-4 py-3 hairline-b">
-            <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-4 overflow-x-auto no-scrollbar" data-lenis-prevent>
               {/* Self Note */}
               <button
                 type="button"
@@ -221,7 +221,7 @@ export function ContextDrawer({
           </div>
 
           {/* Direct Messages List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5 overscroll-contain" data-lenis-prevent>
             {(() => {
               const matchingKeys = Object.keys(chats).filter((key) => {
                 const chat = chats[key];
@@ -317,7 +317,7 @@ export function ContextDrawer({
       {/* SIDEBAR B: THE SPOT (SEARCH, FILTERS & TRENDING VIBES)              */}
       {/* ------------------------------------------------------------------- */}
       {activeTab === 'spot' && (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden min-h-0">
           {/* Horizon Header (56px) */}
           <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
             <div>
@@ -404,7 +404,7 @@ export function ContextDrawer({
           </div>
 
           {/* Trending Vibes */}
-          <div className="p-4 flex-1 overflow-y-auto space-y-4">
+          <div className="p-4 flex-1 min-h-0 overflow-y-auto space-y-4 overscroll-contain" data-lenis-prevent>
             <div>
               <div className="flex items-center justify-between px-1 mb-2">
                 <span className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
@@ -450,7 +450,7 @@ export function ContextDrawer({
       {/* SIDEBAR C: SPACES (CHANNELS & COZY VOICE LOUNGE)                    */}
       {/* ------------------------------------------------------------------- */}
       {activeTab === 'spaces' && currentSpace && (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden min-h-0">
           {/* Horizon Header (56px) */}
           <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
             <div>
@@ -496,7 +496,7 @@ export function ContextDrawer({
           </div>
 
           {/* Channels & Voice Lounge */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-6 overscroll-contain" data-lenis-prevent>
             <div>
               <p className="px-2.5 mb-1.5 text-[11px] font-medium text-ink-muted uppercase tracking-wider">
                 Channels
