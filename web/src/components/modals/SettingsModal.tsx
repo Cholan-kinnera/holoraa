@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X } from '../ui/Icons';
+import { Shield, X } from '../ui/Icons';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
   const [readReceipts, setReadReceipts] = useState(true);
   const [activeStatus, setActiveStatus] = useState(true);
   const [quietHours, setQuietHours] = useState(false);
+  const [ghostMode, setGhostMode] = useState(false);
+  const [incognitoKnocking, setIncognitoKnocking] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,6 +43,8 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
         readReceipts,
         activeStatus,
         quietHours,
+        ghostMode,
+        incognitoKnocking,
       },
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -62,9 +66,12 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
     >
       <div className="w-full max-w-md rounded-[28px] bg-oled-surface hairline-border p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between">
-          <h3 id="settings-modal-title" className="font-display font-semibold text-base text-white">
-            Privacy & Preferences
-          </h3>
+          <div className="flex items-center gap-2">
+            <Shield size={16} className="text-accent-coral" />
+            <h3 id="settings-modal-title" className="font-display font-semibold text-base text-white">
+              Privacy & Preferences
+            </h3>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -75,7 +82,7 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
           </button>
         </div>
 
-        <div className="space-y-4 text-xs">
+        <div className="space-y-3.5 text-xs">
           <label className="flex items-center justify-between py-2 hairline-b cursor-pointer">
             <div>
               <p className="font-medium text-white">Read receipts</p>
@@ -110,6 +117,38 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
 
           <label className="flex items-center justify-between py-2 hairline-b cursor-pointer">
             <div>
+              <p className="font-medium text-white">Ghost mode</p>
+              <p className="text-ink-secondary mt-0.5">Hide your presence completely except from mutuals</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={ghostMode}
+              onChange={(e) => {
+                setGhostMode(e.target.checked);
+                onNotice(e.target.checked ? 'Ghost mode enabled' : 'Ghost mode disabled');
+              }}
+              className="w-4 h-4 accent-white rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between py-2 hairline-b cursor-pointer">
+            <div>
+              <p className="font-medium text-white">Incognito knocking</p>
+              <p className="text-ink-secondary mt-0.5">Only room hosts see your identity when knocking</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={incognitoKnocking}
+              onChange={(e) => {
+                setIncognitoKnocking(e.target.checked);
+                onNotice(e.target.checked ? 'Incognito knocking enabled' : 'Incognito knocking disabled');
+              }}
+              className="w-4 h-4 accent-white rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between py-2 hairline-b cursor-pointer">
+            <div>
               <p className="font-medium text-white">Quiet hours</p>
               <p className="text-ink-secondary mt-0.5">Pause notifications after 11:00 PM</p>
             </div>
@@ -131,12 +170,12 @@ export function SettingsModal({ isOpen, onClose, onNotice }: SettingsModalProps)
             onClick={handleDownloadArchive}
             className="text-xs text-ink-secondary hover:text-white underline transition-colors"
           >
-            Download my data
+            Download personal archive
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-full bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors"
+            className="px-5 py-2 rounded-full bg-white/10 text-white text-xs font-medium border border-white/15 hover:bg-white/15 transition-colors"
           >
             Done
           </button>

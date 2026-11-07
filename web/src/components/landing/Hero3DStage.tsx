@@ -2,6 +2,7 @@
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { ArrowRight, DoorOpen, Sparkles, SquarePen } from '../ui/Icons';
+import { Avatar } from '../ui/Avatar';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
@@ -38,15 +39,16 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
   }, []);
 
   return (
-    <section ref={containerRef} className="hero-3d-stage">
-      {/* Floating Live Activity Pills */}
+    <section ref={containerRef} className="hero-stage-section">
+      <div className="hero-stage-ambient" aria-hidden="true" />
+      <div className="hero-3d-stage">
+        {/* Floating Live Activity Pills */}
       <div className="hero-floating-pills">
         <div className="float-pill hero-float-card">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Avatar
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
-            className="w-5 h-5 rounded-full object-cover"
             alt="Aanya"
+            size="xs"
           />
           <span>
             <strong className="text-white font-medium">Aanya</strong> dropped a thought ·{' '}
@@ -125,9 +127,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
             <button
               type="button"
               onClick={() => onEnterApp('spot')}
-              className="text-xs text-accent-coral hover:underline font-medium"
+              className="btn-window-action"
             >
-              Open full screen →
+              <span>Open full screen</span>
+              <span className="text-accent-coral">→</span>
             </button>
           </div>
 
@@ -145,48 +148,49 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                   <SquarePen size={14} className="text-ink-secondary" />
                 </div>
                 {/* Mini Notes Row */}
-                <div className="flex items-center gap-3.5 py-2 mb-3 overflow-hidden hairline-b pb-3">
+                <div className="grid grid-cols-3 gap-2 py-2 mb-3 border-b hairline-border pb-3 text-center">
                   <div
-                    className="flex flex-col items-center gap-1 cursor-pointer"
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
                     onClick={() => onEnterApp('dms')}
                   >
-                    <div className="w-11 h-11 rounded-full bg-neutral-800 p-0.5 ring-1 ring-accent-coral">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-                        alt="Aanya"
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    </div>
-                    <span className="text-xs text-white">Fred again 🎧</span>
+                    <Avatar
+                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                      alt="Aanya"
+                      size="md"
+                      ring="coral"
+                    />
+                    <span className="text-[11px] text-neutral-300 font-medium group-hover:text-white transition-colors">
+                      Aanya
+                    </span>
                   </div>
+
                   <div
-                    className="flex flex-col items-center gap-1 cursor-pointer"
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
                     onClick={() => onEnterApp('room')}
                   >
-                    <div className="w-11 h-11 rounded-full bg-neutral-800 p-0.5 ring-1 ring-accent-green">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
-                        alt="Rohan"
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    </div>
-                    <span className="text-xs text-accent-green">in room 🎙️</span>
+                    <Avatar
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
+                      alt="Rohan"
+                      size="md"
+                      ring="green"
+                    />
+                    <span className="text-[11px] text-neutral-300 font-medium group-hover:text-white transition-colors">
+                      Rohan
+                    </span>
                   </div>
+
                   <div
-                    className="flex flex-col items-center gap-1 cursor-pointer"
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
                     onClick={() => onEnterApp('spot')}
                   >
-                    <div className="w-11 h-11 rounded-full bg-neutral-800 p-0.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&auto=format&fit=crop&q=80"
-                        alt="Meera"
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    </div>
-                    <span className="text-xs text-ink-secondary">film lab 🎞️</span>
+                    <Avatar
+                      src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&auto=format&fit=crop&q=80"
+                      alt="Meera"
+                      size="md"
+                    />
+                    <span className="text-[11px] text-neutral-300 font-medium group-hover:text-white transition-colors">
+                      Meera
+                    </span>
                   </div>
                 </div>
 
@@ -196,11 +200,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     onClick={() => onEnterApp('dms')}
                     className="p-2.5 rounded-2xl bg-oled-elevated cursor-pointer flex items-center gap-3"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Avatar
                       src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-                      alt="Aanya"
-                      className="w-9 h-9 rounded-full object-cover"
+                      alt="Aanya Sharma"
+                      size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
@@ -214,11 +217,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     onClick={() => onEnterApp('dms')}
                     className="p-2.5 rounded-2xl hover:bg-oled-surface cursor-pointer flex items-center gap-3 transition-colors"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Avatar
                       src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=120&auto=format&fit=crop&q=80"
-                      alt="Goa"
-                      className="w-9 h-9 rounded-full object-cover"
+                      alt="Weekend Goa Plan"
+                      size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
@@ -276,11 +278,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                   <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Avatar
                           src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                          className="w-8 h-8 rounded-full object-cover"
-                          alt="Aanya"
+                          alt="Aanya Sharma"
+                          size="md"
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -298,14 +299,15 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                       Editing the 35mm roll from Pondicherry. Love having a quiet spot to share
                       snapshots with close friends without reels algorithms.
                     </p>
-                    <div className="pl-10 flex items-center gap-4 text-xs text-ink-secondary">
-                      <span className="text-accent-coral flex items-center gap-1">❤️ 18</span>
+                    <div className="pl-10 flex items-center gap-4 text-xs">
+                      <span className="text-accent-coral flex items-center gap-1 font-mono text-[11px]">❤️ 18</span>
                       <button
                         type="button"
                         onClick={() => onEnterApp('spot')}
-                        className="hover:text-white transition-colors"
+                        className="btn-reply-dm"
                       >
-                        Reply in DM →
+                        <span>Reply in DM</span>
+                        <span className="text-accent-coral">→</span>
                       </button>
                     </div>
                   </div>
@@ -313,11 +315,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                   <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Avatar
                           src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
-                          className="w-8 h-8 rounded-full object-cover"
-                          alt="Kabir"
+                          alt="Kabir Menon"
+                          size="md"
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -341,11 +342,10 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                 <div className="space-y-3 my-auto py-3">
                   <div className="p-3.5 rounded-2xl bg-oled-surface hairline-border space-y-2">
                     <div className="flex items-start gap-2.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Avatar
                         src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                        className="w-8 h-8 rounded-full object-cover mt-0.5"
-                        alt="Aanya"
+                        alt="Aanya Sharma"
+                        size="md"
                       />
                       <div className="space-y-1">
                         <span className="text-xs font-medium text-white">Aanya Sharma</span>
@@ -356,7 +356,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <div className="p-2.5 rounded-2xl bg-white text-black text-xs font-medium max-w-xs">
+                    <div className="story-outgoing-bubble text-xs font-medium max-w-xs">
                       On my way, bringing my notebook 🏃
                     </div>
                   </div>
@@ -367,20 +367,20 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                 onClick={() => onEnterApp('spot')}
                 className="hero-mini-composer"
               >
-                <div className="flex items-center gap-2.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Avatar
                     src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&auto=format&fit=crop&q=80"
-                    className="w-6 h-6 rounded-full object-cover"
                     alt="You"
+                    size="sm"
                   />
-                  <span className="text-xs text-ink-muted">Drop a thought or status note...</span>
+                  <span className="text-xs text-ink-muted truncate">Drop a thought or status note...</span>
                 </div>
-                <span className="text-xs font-medium text-accent-coral pr-1">Post →</span>
+                <span className="text-xs font-medium text-accent-coral shrink-0 pr-1">Post →</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

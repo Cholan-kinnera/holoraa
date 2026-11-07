@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from '../ui/Icons';
+import { Avatar } from '../ui/Avatar';
 import type { WorkspaceTab } from './IconRail';
 
 interface ContextDrawerProps {
@@ -38,6 +39,8 @@ interface ContextDrawerProps {
   onOpenRoom: () => void;
   onOpenCommandSearch: () => void;
   onCopyInvite: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export function ContextDrawer({
@@ -60,32 +63,56 @@ export function ContextDrawer({
   onOpenRoom,
   onOpenCommandSearch,
   onCopyInvite,
+  isOpen = true,
+  onClose,
 }: ContextDrawerProps) {
   const [chatSearch, setChatSearch] = useState('');
 
   const currentSpace = spaces[currentSpaceKey] ?? spaces['design'] ?? Object.values(spaces)[0];
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <section className="w-72 sm:w-80 h-full bg-oled-sidebar hairline-r flex flex-col justify-between shrink-0 overflow-hidden">
+    <section
+      className="w-76 xl:w-80 h-full bg-oled-sidebar hairline-r flex flex-col justify-between shrink-0 overflow-hidden z-10"
+      aria-label="Navigation and Context Drawer"
+    >
       {/* ------------------------------------------------------------------- */}
       {/* SIDEBAR A: DIRECT MESSAGES & INSTAGRAM-STYLE NOTES TRAY             */}
       {/* ------------------------------------------------------------------- */}
       {(activeTab === 'dms' || activeTab === 'room') && (
         <div className="flex flex-col h-full overflow-hidden">
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-            <h2 className="font-semibold text-lg text-white tracking-tight">Messages</h2>
-            <button
-              type="button"
-              onClick={onOpenCommandSearch}
-              className="p-2 rounded-full hover:bg-oled-elevated text-ink-secondary hover:text-white transition-colors"
-              title="Find Person or New Chat"
-            >
-              <SquarePen size={16} />
-            </button>
+          {/* Horizon Header (56px) */}
+          <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
+            <h2 className="font-semibold text-base text-white tracking-tight">Messages</h2>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onOpenCommandSearch}
+                className="p-2 rounded-full hover:bg-oled-elevated text-ink-secondary hover:text-white transition-colors"
+                title="Find Person or New Chat"
+                aria-label="Find Person or New Chat"
+              >
+                <SquarePen size={16} />
+              </button>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-2 rounded-full hover:bg-oled-elevated text-ink-secondary hover:text-white transition-colors md:hidden"
+                  title="Close sidebar"
+                  aria-label="Close sidebar"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Clean Search Input */}
-          <div className="px-4 mb-3">
+          <div className="p-3">
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
                 <Search size={14} />
@@ -95,29 +122,38 @@ export function ContextDrawer({
                 value={chatSearch}
                 onChange={(e) => setChatSearch(e.target.value)}
                 placeholder="Search chats..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-oled-surface hairline-border text-xs text-white placeholder-ink-muted focus:outline-none focus:border-white/20 transition-all"
+                className="w-full pl-9 pr-8 py-2 rounded-xl bg-oled-surface hairline-border text-xs text-white placeholder-ink-muted focus:outline-none focus:border-white/20 transition-all"
               />
+              {chatSearch.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setChatSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-white transition-colors"
+                  aria-label="Clear chat search"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Instagram-Style Horizontal Notes Tray */}
-          <div className="px-4 py-2.5 hairline-b">
+          <div className="px-4 py-3 hairline-b">
             <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
               {/* Self Note */}
               <button
                 type="button"
                 onClick={onUpdateSelfNote}
-                className="flex flex-col items-center gap-1.5 shrink-0 group"
+                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
               >
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   <div className="px-2 py-0.5 rounded-full bg-oled-elevated hairline-border text-[10px] text-ink-secondary max-w-[74px] truncate mb-1">
                     {selfNote || 'Note...'}
                   </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Avatar
                     src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&auto=format&fit=crop&q=80"
-                    className="w-12 h-12 rounded-full object-cover opacity-85 group-hover:opacity-100 transition-opacity mx-auto"
                     alt="Your note"
+                    size="xl"
                   />
                 </div>
                 <span className="text-[11px] text-ink-secondary">Your note</span>
@@ -127,20 +163,18 @@ export function ContextDrawer({
               <button
                 type="button"
                 onClick={() => onSelectChat('aanya')}
-                className="flex flex-col items-center gap-1.5 shrink-0 group"
+                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
               >
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   <div className="px-2 py-0.5 rounded-full bg-oled-elevated hairline-border text-[10px] text-white mb-1">
                     Fred again.. 🎧
                   </div>
-                  <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-accent-coral to-amber-500 mx-auto">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-                      className="w-full h-full rounded-full object-cover border-2 border-black"
-                      alt="Aanya"
-                    />
-                  </div>
+                  <Avatar
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                    alt="Aanya"
+                    size="xl"
+                    ring="coral"
+                  />
                 </div>
                 <span className="text-[11px] text-white">Aanya</span>
               </button>
@@ -149,20 +183,18 @@ export function ContextDrawer({
               <button
                 type="button"
                 onClick={onOpenRoom}
-                className="flex flex-col items-center gap-1.5 shrink-0 group"
+                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
               >
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   <div className="px-2 py-0.5 rounded-full bg-accent-green/15 text-accent-green text-[10px] font-medium mb-1">
                     In room 🎙️
                   </div>
-                  <div className="w-12 h-12 rounded-full p-0.5 ring-1 ring-accent-green mx-auto">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
-                      className="w-full h-full rounded-full object-cover"
-                      alt="Rohan"
-                    />
-                  </div>
+                  <Avatar
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
+                    alt="Rohan"
+                    size="xl"
+                    ring="green"
+                  />
                 </div>
                 <span className="text-[11px] text-ink-secondary">Rohan</span>
               </button>
@@ -171,17 +203,16 @@ export function ContextDrawer({
               <button
                 type="button"
                 onClick={() => onSelectChat('meera')}
-                className="flex flex-col items-center gap-1.5 shrink-0 group"
+                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
               >
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   <div className="px-2 py-0.5 rounded-full bg-oled-elevated hairline-border text-[10px] text-white mb-1">
                     iced matcha
                   </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Avatar
                     src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&auto=format&fit=crop&q=80"
-                    className="w-12 h-12 rounded-full object-cover mx-auto"
                     alt="Meera"
+                    size="xl"
                   />
                 </div>
                 <span className="text-[11px] text-ink-secondary">Meera</span>
@@ -191,68 +222,93 @@ export function ContextDrawer({
 
           {/* Direct Messages List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-            {Object.keys(chats).map((key) => {
-              const chat = chats[key];
-              if (!chat) return null;
-              if (chatSearch && !chat.name.toLowerCase().includes(chatSearch.toLowerCase())) {
-                return null;
+            {(() => {
+              const matchingKeys = Object.keys(chats).filter((key) => {
+                const chat = chats[key];
+                if (!chat) return false;
+                if (!chatSearch.trim()) return true;
+                const q = chatSearch.toLowerCase();
+                return chat.name.toLowerCase().includes(q) || chat.subtitle.toLowerCase().includes(q);
+              });
+
+              if (matchingKeys.length === 0) {
+                return (
+                  <div className="p-8 text-center flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-oled-surface hairline-border flex items-center justify-center text-ink-muted mb-2.5">
+                      <Search size={16} />
+                    </div>
+                    <p className="text-xs font-semibold text-white">No chats found</p>
+                    <p className="text-[11px] text-ink-secondary mt-1">
+                      No conversation matches &ldquo;{chatSearch}&rdquo;
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setChatSearch('')}
+                      className="mt-3 px-3 py-1.5 rounded-full bg-oled-surface hover:bg-oled-elevated hairline-border text-xs text-white transition-colors"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                );
               }
 
-              const isSelected = activeChatKey === key;
-              const last = chat.messages[chat.messages.length - 1];
+              return matchingKeys.map((key) => {
+                const chat = chats[key];
+                if (!chat) return null;
 
-              return (
-                <div
-                  key={key}
-                  onClick={() => onSelectChat(key)}
-                  className={`relative px-3 py-2.5 rounded-2xl cursor-pointer transition-all flex items-center gap-3 ${
-                    isSelected
-                      ? 'bg-oled-elevated hairline-border shadow-sm'
-                      : 'hover:bg-oled-surface border border-transparent'
-                  }`}
-                >
-                  {isSelected && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-accent-coral" />
-                  )}
-                  <div className="relative shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                const isSelected = activeChatKey === key;
+                const last = chat.messages[chat.messages.length - 1];
+
+                return (
+                  <div
+                    key={key}
+                    onClick={() => onSelectChat(key)}
+                    className={`relative px-3 py-2.5 rounded-2xl cursor-pointer transition-all flex items-center gap-3 ${
+                      isSelected
+                        ? 'bg-oled-elevated hairline-border shadow-sm'
+                        : 'hover:bg-oled-surface border border-transparent'
+                    }`}
+                  >
+                    {isSelected && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-accent-coral" />
+                    )}
+                    <Avatar
                       src={chat.avatar}
                       alt={chat.name}
-                      className="w-11 h-11 rounded-full object-cover"
+                      size="lg"
+                      presence={chat.online ? 'online' : undefined}
                     />
-                    {chat.online && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-accent-green ring-2 ring-oled-sidebar absolute bottom-0 right-0" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-white truncate">{chat.name}</span>
-                      <span className="font-mono text-[10px] text-ink-muted">
-                        {last ? last.time : ''}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-white truncate">{chat.name}</span>
+                        <span className="font-mono text-[10px] text-ink-muted">
+                          {last ? last.time : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p
+                          className={`text-xs ${
+                            chat.unread ? 'text-white font-medium' : 'text-ink-secondary'
+                          } truncate`}
+                        >
+                          {last ? (last.self ? 'You: ' + last.text : last.text) : ''}
+                        </p>
+                        {chat.unread > 0 ? (
+                          <span className="min-w-4 h-4 px-1 rounded-full bg-accent-coral text-[10px] font-bold text-white flex items-center justify-center shrink-0 ml-2">
+                            {chat.unread}
+                          </span>
+                        ) : (
+                          last &&
+                          last.self && (
+                            <CheckCheck size={14} className="text-ink-secondary shrink-0 ml-1" />
+                          )
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p
-                        className={`text-xs ${
-                          chat.unread ? 'text-white font-medium' : 'text-ink-secondary'
-                        } truncate`}
-                      >
-                        {last ? (last.self ? 'You: ' + last.text : last.text) : ''}
-                      </p>
-                      {chat.unread > 0 ? (
-                        <span className="w-2 h-2 rounded-full bg-accent-coral shrink-0 ml-2" />
-                      ) : (
-                        last &&
-                        last.self && (
-                          <CheckCheck size={14} className="text-ink-secondary shrink-0 ml-1" />
-                        )
-                      )}
-                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
@@ -262,10 +318,11 @@ export function ContextDrawer({
       {/* ------------------------------------------------------------------- */}
       {activeTab === 'spot' && (
         <div className="flex flex-col h-full overflow-hidden">
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+          {/* Horizon Header (56px) */}
+          <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
             <div>
-              <h2 className="font-semibold text-lg text-white tracking-tight">The Spot</h2>
-              <p className="text-[11px] text-ink-secondary">Thoughts, notes & mutual orbit</p>
+              <h2 className="font-semibold text-base text-white tracking-tight">The Spot</h2>
+              <p className="text-[10px] text-ink-secondary">Thoughts, notes & mutual orbit</p>
             </div>
             <button
               type="button"
@@ -277,7 +334,7 @@ export function ContextDrawer({
           </div>
 
           {/* Search Input */}
-          <div className="px-4 mb-3">
+          <div className="p-3">
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
                 <Search size={14} />
@@ -308,8 +365,8 @@ export function ContextDrawer({
               onClick={() => onSelectSpotFilter('foryou')}
               className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center justify-between transition-all ${
                 spotFilter === 'foryou'
-                  ? 'bg-white text-black'
-                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+                  ? 'bg-white/12 text-white border border-white/20 shadow-sm'
+                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface border border-transparent'
               }`}
             >
               <span className="flex items-center gap-2.5">
@@ -322,8 +379,8 @@ export function ContextDrawer({
               onClick={() => onSelectSpotFilter('following')}
               className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center justify-between transition-all ${
                 spotFilter === 'following'
-                  ? 'bg-white text-black'
-                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+                  ? 'bg-white/12 text-white border border-white/20 shadow-sm'
+                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface border border-transparent'
               }`}
             >
               <span className="flex items-center gap-2.5">
@@ -336,8 +393,8 @@ export function ContextDrawer({
               onClick={() => onSelectSpotFilter('media')}
               className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center justify-between transition-all ${
                 spotFilter === 'media'
-                  ? 'bg-white text-black'
-                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+                  ? 'bg-white/12 text-white border border-white/20 shadow-sm'
+                  : 'text-ink-secondary hover:text-white hover:bg-oled-surface border border-transparent'
               }`}
             >
               <span className="flex items-center gap-2.5">
@@ -394,31 +451,32 @@ export function ContextDrawer({
       {/* ------------------------------------------------------------------- */}
       {activeTab === 'spaces' && currentSpace && (
         <div className="flex flex-col h-full overflow-hidden">
-          <div className="p-4 hairline-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-base text-white">{currentSpace.name}</h2>
-                <p className="text-[11px] text-ink-secondary">{currentSpace.members}</p>
-              </div>
-              <button
-                type="button"
-                onClick={onCopyInvite}
-                className="px-2.5 py-1 rounded-full bg-oled-elevated hover:bg-neutral-800 text-[11px] text-white hairline-border flex items-center gap-1 transition-colors"
-              >
-                <LinkIcon size={12} />
-                <span>Invite</span>
-              </button>
+          {/* Horizon Header (56px) */}
+          <div className="h-14 px-5 border-b hairline-border flex items-center justify-between shrink-0 bg-oled-sidebar/80 backdrop-blur-md">
+            <div>
+              <h2 className="font-semibold text-base text-white">{currentSpace.name}</h2>
+              <p className="text-[10px] text-ink-secondary">{currentSpace.members}</p>
             </div>
+            <button
+              type="button"
+              onClick={onCopyInvite}
+              className="px-2.5 py-1 rounded-full bg-oled-elevated hover:bg-neutral-800 text-[11px] text-white hairline-border flex items-center gap-1 transition-colors"
+            >
+              <LinkIcon size={12} />
+              <span>Invite</span>
+            </button>
+          </div>
 
+          <div className="p-3">
             {/* Space Pills */}
-            <div className="flex items-center gap-1.5 mt-3.5">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => onSelectSpace('design')}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   currentSpaceKey === 'design'
-                    ? 'bg-white text-black'
-                    : 'bg-oled-surface text-ink-secondary hover:text-white'
+                    ? 'bg-white/15 text-white border border-white/20'
+                    : 'bg-oled-surface text-ink-secondary hover:text-white border border-transparent'
                 }`}
               >
                 Design Club
@@ -428,8 +486,8 @@ export function ContextDrawer({
                 onClick={() => onSelectSpace('late')}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   currentSpaceKey === 'late'
-                    ? 'bg-white text-black'
-                    : 'bg-oled-surface text-ink-secondary hover:text-white'
+                    ? 'bg-white/15 text-white border border-white/20'
+                    : 'bg-oled-surface text-ink-secondary hover:text-white border border-transparent'
                 }`}
               >
                 Late Night Crew
@@ -474,11 +532,11 @@ export function ContextDrawer({
                 <div className="space-y-2 pl-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Avatar
                         src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                        className="w-6 h-6 rounded-full object-cover ring-1 ring-accent-green"
                         alt="Aanya"
+                        size="xs"
+                        ring="green"
                       />
                       <span className="text-xs text-neutral-200">Aanya</span>
                     </div>
@@ -486,11 +544,10 @@ export function ContextDrawer({
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Avatar
                         src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-                        className="w-6 h-6 rounded-full object-cover"
                         alt="Rohan"
+                        size="xs"
                       />
                       <span className="text-xs text-ink-secondary">Rohan</span>
                     </div>
@@ -513,7 +570,7 @@ export function ContextDrawer({
 
       {/* Persistent Connected Voice Bar */}
       {inVoiceLounge && (
-        <div className="p-3 m-2 rounded-2xl bg-oled-surface hairline-border flex items-center justify-between">
+        <div className="p-3 m-2 rounded-2xl bg-oled-surface hairline-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="w-2 h-2 rounded-full bg-accent-green animate-ping shrink-0" />
             <div className="truncate">

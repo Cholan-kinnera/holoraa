@@ -2,6 +2,8 @@
 
 import React, { useLayoutEffect, useRef } from 'react';
 import { CheckCheck } from '../ui/Icons';
+import { Avatar } from '../ui/Avatar';
+import { FollowButton } from '../ui/FollowButton';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
@@ -62,11 +64,11 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
 
         <div className="story-card-wrapper">
           <div className="flex items-start gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Avatar
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-              className="w-8 h-8 rounded-full object-cover mt-1"
               alt="Aanya"
+              size="md"
+              className="mt-1"
             />
             <div className="space-y-1.5">
               <div className="story-photo-bubble">
@@ -92,8 +94,8 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                 Aanya: Morning coffee by the coast ☕🌊
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="font-medium">Save us a table, reaching in 15!</span>
-                <CheckCheck size={14} className="text-neutral-600 shrink-0" />
+                <span className="font-medium text-white">Save us a table, reaching in 15!</span>
+                <CheckCheck size={14} className="text-accent-coral shrink-0" />
               </div>
             </div>
           </div>
@@ -106,11 +108,10 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
           <div className="p-4 rounded-2xl bg-oled-black hairline-border space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Avatar
                   src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&auto=format&fit=crop&q=80"
-                  className="w-10 h-10 rounded-full object-cover"
-                  alt="Meera"
+                  alt="Meera Nair"
+                  size="lg"
                 />
                 <div>
                   <div className="flex items-center gap-2">
@@ -120,13 +121,11 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                   <p className="text-xs text-ink-secondary">Followed by Aanya + 6 mutuals</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => onEnterApp('spot')}
-                className="px-3.5 py-1.5 rounded-full bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors"
-              >
-                Follow
-              </button>
+              <FollowButton
+                isFollowing={false}
+                onToggle={() => onEnterApp('spot')}
+                size="sm"
+              />
             </div>
             <p className="text-xs sm:text-sm text-neutral-200 leading-relaxed">
               Developing 35mm black-and-white rolls at home tonight. Drop your favorite photobooks below 🎞️✨
@@ -139,9 +138,10 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
               <button
                 type="button"
                 onClick={() => onEnterApp('spot')}
-                className="text-white hover:underline text-xs font-medium"
+                className="btn-reply-dm"
               >
-                Reply in DM →
+                <span>Reply in DM</span>
+                <span className="text-accent-coral">→</span>
               </button>
             </div>
           </div>
@@ -205,23 +205,21 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                 <span className="text-xs text-ink-secondary">3 inside</span>
               </div>
               <div className="flex items-center -space-x-2 my-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Avatar
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-black"
                   alt="Member"
+                  size="md"
                 />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Avatar
                   src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-accent-green"
-                  alt="Member"
+                  alt="Speaking member"
+                  size="md"
+                  ring="green"
                 />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Avatar
                   src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80"
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-black"
                   alt="Member"
+                  size="md"
                 />
               </div>
               <button
@@ -238,37 +236,36 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
 
       {/* Pillar 04: Personal Rooms */}
       <div id="section-room" className="story-row story-row--room">
-        <div className="story-card-wrapper flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+        <div className="story-card-wrapper">
+          <div className="room-knock-card">
+            <div className="room-knock-info">
+              <Avatar
                 src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
-                className="w-14 h-14 rounded-full object-cover"
                 alt="Rohan"
+                size="xl"
+                presence="knock"
               />
-              <span className="w-3.5 h-3.5 rounded-full bg-accent-coral border-2 border-black absolute -bottom-0.5 -right-0.5" />
+              <div className="room-knock-details">
+                <p className="room-knock-title">Rohan knocked on your room</p>
+                <p className="room-knock-meta">holoraa.app/arjun · Waiting lobby</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">Rohan knocked on your room</p>
-              <p className="text-xs text-ink-secondary mt-0.5">holoraa.app/arjun · Waiting lobby</p>
+            <div className="room-knock-actions">
+              <button
+                type="button"
+                onClick={() => onEnterApp('room')}
+                className="btn-let-in"
+              >
+                Let in
+              </button>
+              <button
+                type="button"
+                onClick={() => onEnterApp('room')}
+                className="btn-dismiss-knock"
+              >
+                Dismiss
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => onEnterApp('room')}
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors"
-            >
-              Let in
-            </button>
-            <button
-              type="button"
-              onClick={() => onEnterApp('room')}
-              className="px-4 py-2.5 rounded-full bg-oled-elevated text-ink-secondary text-xs hover:text-white transition-colors"
-            >
-              Dismiss
-            </button>
           </div>
         </div>
 

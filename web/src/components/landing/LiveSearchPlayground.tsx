@@ -7,6 +7,8 @@ import {
   searchPeople,
 } from '../../lib/dsa/search-graph';
 import { Search } from '../ui/Icons';
+import { Avatar } from '../ui/Avatar';
+import { FollowButton } from '../ui/FollowButton';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
@@ -145,36 +147,27 @@ export function LiveSearchPlayground({
                 onClick={() => onSelectUser(user.id)}
                 className="search-result-card"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Avatar
                     src={user.avatar}
-                    className="w-11 h-11 rounded-full object-cover shrink-0"
                     alt={user.name}
+                    size="lg"
                   />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-xs font-semibold text-white truncate">{user.name}</span>
-                      <span className="text-xs text-ink-secondary">{user.handle}</span>
+                      <span className="text-xs text-ink-secondary truncate shrink-0">{user.handle}</span>
                     </div>
                     <p className="text-xs text-ink-secondary truncate">{user.bio}</p>
-                    <p className="text-xs text-accent-coral mt-0.5">{mutualText}</p>
+                    <p className="text-xs text-accent-coral mt-0.5 truncate">{mutualText}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFollow(user.id);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition-all ${
-                    isFollowing
-                      ? 'bg-oled-elevated text-white hairline-border hover:bg-neutral-800'
-                      : 'bg-white text-black hover:bg-neutral-200'
-                  }`}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
+                <FollowButton
+                  isFollowing={isFollowing}
+                  onToggle={() => onToggleFollow(user.id)}
+                  size="sm"
+                  className="shrink-0"
+                />
               </div>
             );
           })}

@@ -14,10 +14,12 @@ import {
 import type { DirectoryUser, ThoughtRecord } from '../lib/dsa/search-graph';
 import Link from 'next/link';
 import { rankThoughts } from '../lib/dsa/search-graph';
+import { useLenis } from '../lib/lenis';
 import { FloatingNavbar } from './landing/FloatingNavbar';
 import { Hero3DStage } from './landing/Hero3DStage';
 import { LiveSearchPlayground } from './landing/LiveSearchPlayground';
 import { StoryBentoGrid } from './landing/StoryBentoGrid';
+import { TheContrast } from './landing/TheContrast';
 import { Principles } from './landing/Principles';
 import { Holories } from './landing/Holories';
 import { FinalCta } from './landing/FinalCta';
@@ -33,6 +35,8 @@ import { RightOrbitRail } from './workspace/RightOrbitRail';
 
 
 export function HoloraaApp() {
+  useLenis();
+
   // Current view mode: landing page vs interactive 4-column web app
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dms');
@@ -84,6 +88,11 @@ export function HoloraaApp() {
   const [isCommandSearchOpen, setIsCommandSearchOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isContactSafetyOpen, setIsContactSafetyOpen] = useState<boolean>(false);
+
+  // Shell responsive & rail toggle state
+  const [isRightRailOpen, setIsRightRailOpen] = useState<boolean>(true);
+  const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState<boolean>(true);
+  const [mobilePane, setMobilePane] = useState<'drawer' | 'stage'>('stage');
 
   // Floating pill notice
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
@@ -353,6 +362,8 @@ export function HoloraaApp() {
 
             <StoryBentoGrid onEnterApp={handleEnterApp} />
 
+            <TheContrast />
+
             <Principles />
 
             <Holories />
@@ -368,6 +379,9 @@ export function HoloraaApp() {
                 <span>One quiet place for the people who matter.</span>
               </div>
               <nav aria-label="Footer Navigation" className="flex items-center gap-6 text-ink-secondary">
+                <a href="#the-contrast" className="hover:text-white transition-colors">
+                  Why Holoraa
+                </a>
                 <a href="#principles" className="hover:text-white transition-colors">
                   Principles
                 </a>
@@ -380,9 +394,6 @@ export function HoloraaApp() {
                 <Link href="/sign-in" className="hover:text-white transition-colors">
                   Sign In
                 </Link>
-                <a href="/prototype.html" className="hover:text-white transition-colors">
-                  Original Prototype
-                </a>
               </nav>
             </div>
           </footer>
@@ -407,82 +418,98 @@ export function HoloraaApp() {
           />
 
           {/* Column 2: Context Drawer */}
-          <ContextDrawer
-            activeTab={activeTab}
-            chats={chats}
-            activeChatKey={activeChatKey}
-            onSelectChat={setActiveChatKey}
-            selfNote={selfNote}
-            onUpdateSelfNote={handleUpdateSelfNote}
-            spotFilter={spotFilter}
-            onSelectSpotFilter={setSpotFilter}
-            spotSearchQuery={spotSearchQuery}
-            onSpotSearch={setSpotSearchQuery}
-            followingCount={followingCount}
-            spaces={spaces}
-            currentSpaceKey={currentSpaceKey}
-            onSelectSpace={setCurrentSpaceKey}
-            inVoiceLounge={inVoiceLounge}
-            onToggleVoiceLounge={() => {
-              setInVoiceLounge((prev) => !prev);
-              showNotice(!inVoiceLounge ? 'Joined Late Night Lounge' : 'Left voice lounge');
-            }}
-            onOpenRoom={() => setActiveTab('room')}
-            onOpenCommandSearch={() => setIsCommandSearchOpen(true)}
-            onCopyInvite={handleCopyInvite}
-          />
+          <div className={`${mobilePane === 'stage' ? 'hidden md:flex' : 'flex'} h-full shrink-0`}>
+            <ContextDrawer
+              activeTab={activeTab}
+              chats={chats}
+              activeChatKey={activeChatKey}
+              onSelectChat={(key) => {
+                setActiveChatKey(key);
+                setMobilePane('stage');
+              }}
+              selfNote={selfNote}
+              onUpdateSelfNote={handleUpdateSelfNote}
+              spotFilter={spotFilter}
+              onSelectSpotFilter={setSpotFilter}
+              spotSearchQuery={spotSearchQuery}
+              onSpotSearch={setSpotSearchQuery}
+              followingCount={followingCount}
+              spaces={spaces}
+              currentSpaceKey={currentSpaceKey}
+              onSelectSpace={setCurrentSpaceKey}
+              inVoiceLounge={inVoiceLounge}
+              onToggleVoiceLounge={() => {
+                setInVoiceLounge((prev) => !prev);
+                showNotice(!inVoiceLounge ? 'Joined Late Night Lounge' : 'Left voice lounge');
+              }}
+              onOpenRoom={() => setActiveTab('room')}
+              onOpenCommandSearch={() => setIsCommandSearchOpen(true)}
+              onCopyInvite={handleCopyInvite}
+              isOpen={isLeftDrawerOpen}
+              onClose={() => setIsLeftDrawerOpen(false)}
+            />
+          </div>
 
           {/* Column 3: Main Stage */}
-          <MainStage
-            activeTab={activeTab}
-            currentChat={currentChat}
-            activeChatKey={activeChatKey}
-            onSendMessage={handleSendMessage}
-            onReactMessage={handleReactMessage}
-            replyDraft={replyDraft}
-            onStartReply={(author, text) => setReplyDraft({ author, text })}
-            onClearReply={() => setReplyDraft(null)}
-            onOpenUserProfile={(id) => setUserProfileModalId(id)}
-            onOpenContactOptions={() => setIsContactSafetyOpen(true)}
-            thoughts={rankedThoughts}
-            peopleDirectory={people}
-            currentUserId="arjun"
-            onPublishThought={handlePublishThought}
-            onToggleLikeThought={handleToggleLikeThought}
-            onBridgeThoughtToDM={handleBridgeThoughtToDM}
-            onToggleFollow={handleToggleFollow}
-            isFollowingUser={(id) => myFollowing.has(id)}
-            onOpenCommandSearch={() => setIsCommandSearchOpen(true)}
-            roomKnockActive={roomKnockActive}
-            onAdmitKnock={() => {
-              setRoomKnockActive(false);
-              setRoomTiles((prev) => [
-                ...prev,
-                {
-                  id: 'meera',
-                  name: 'Meera Nair',
-                  avatar: INITIAL_PEOPLE_DIRECTORY['meera']?.avatar ?? '',
-                  isSpeaking: false,
-                },
-              ]);
-              showNotice('Admitted Meera to room');
-            }}
-            onDismissKnock={() => {
-              setRoomKnockActive(false);
-              showNotice('Dismissed room knock');
-            }}
-            roomTiles={roomTiles}
-            roomLocked={roomLocked}
-            onToggleRoomLock={() => {
-              setRoomLocked((prev) => {
-                const next = !prev;
-                showNotice(next ? 'Room locked (knock required)' : 'Room unlocked');
-                return next;
-              });
-            }}
-            onLeaveRoom={handleReturnToLanding}
-            onShowNotice={showNotice}
-          />
+          <div className={`${mobilePane === 'drawer' ? 'hidden md:flex' : 'flex'} flex-1 min-w-0 h-full`}>
+            <MainStage
+              activeTab={activeTab}
+              currentChat={currentChat}
+              activeChatKey={activeChatKey}
+              onSendMessage={handleSendMessage}
+              onReactMessage={handleReactMessage}
+              replyDraft={replyDraft}
+              onStartReply={(author, text) => setReplyDraft({ author, text })}
+              onClearReply={() => setReplyDraft(null)}
+              onOpenUserProfile={(id) => setUserProfileModalId(id)}
+              onOpenContactOptions={() => setIsContactSafetyOpen(true)}
+              thoughts={rankedThoughts}
+              peopleDirectory={people}
+              currentUserId="arjun"
+              onPublishThought={handlePublishThought}
+              onToggleLikeThought={handleToggleLikeThought}
+              onBridgeThoughtToDM={handleBridgeThoughtToDM}
+              onToggleFollow={handleToggleFollow}
+              isFollowingUser={(id) => myFollowing.has(id)}
+              onOpenCommandSearch={() => setIsCommandSearchOpen(true)}
+              spotFilter={spotFilter}
+              onSelectSpotFilter={setSpotFilter}
+              roomKnockActive={roomKnockActive}
+              onAdmitKnock={() => {
+                setRoomKnockActive(false);
+                setRoomTiles((prev) => [
+                  ...prev,
+                  {
+                    id: 'meera',
+                    name: 'Meera Nair',
+                    avatar: INITIAL_PEOPLE_DIRECTORY['meera']?.avatar ?? '',
+                    isSpeaking: false,
+                  },
+                ]);
+                showNotice('Admitted Meera to room');
+              }}
+              onDismissKnock={() => {
+                setRoomKnockActive(false);
+                showNotice('Dismissed room knock');
+              }}
+              roomTiles={roomTiles}
+              roomLocked={roomLocked}
+              onToggleRoomLock={() => {
+                setRoomLocked((prev) => {
+                  const next = !prev;
+                  showNotice(next ? 'Room locked (knock required)' : 'Room unlocked');
+                  return next;
+                });
+              }}
+              onLeaveRoom={handleReturnToLanding}
+              onShowNotice={showNotice}
+              onOpenRoom={() => setActiveTab('room')}
+              isRightRailOpen={isRightRailOpen}
+              onToggleRightRail={() => setIsRightRailOpen((prev) => !prev)}
+              mobilePane={mobilePane}
+              onBackToDrawer={() => setMobilePane('drawer')}
+            />
+          </div>
 
           {/* Column 4: Right Orbit Rail */}
           <RightOrbitRail
@@ -494,6 +521,12 @@ export function HoloraaApp() {
             onOpenRoom={() => setActiveTab('room')}
             onToggleFollow={handleToggleFollow}
             selfNote={selfNote}
+            isOpen={isRightRailOpen}
+            onClose={() => setIsRightRailOpen(false)}
+            activeTab={activeTab}
+            activeChat={currentChat}
+            onShowNotice={showNotice}
+            onOpenContactSafety={() => setIsContactSafetyOpen(true)}
           />
         </div>
       )}

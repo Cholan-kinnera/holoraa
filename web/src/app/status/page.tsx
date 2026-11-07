@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/ui/Brand";
 import { createApiClient, readApiBaseUrl } from "@/lib/api/client";
 import { loadStatus, type CheckState, type StatusReport } from "@/lib/status";
 
@@ -25,8 +26,13 @@ export default async function StatusPage() {
   return (
     <main className="page">
       <header>
-        <h1>Holoraa status</h1>
-        <p className="lede">Live check of the API and database. Nothing is cached.</p>
+        <Link href="/" className="brand status-brand-link">
+          <BrandMark />
+          <span className="status-brand-name">Holoraa</span>
+        </Link>
+        <p className="eyebrow">System verification</p>
+        <h1>System status</h1>
+        <p className="lede">Live verification of the Go API server and PostgreSQL database. Nothing is cached.</p>
       </header>
 
       <section className="checks" aria-label="System checks">

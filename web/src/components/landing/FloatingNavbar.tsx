@@ -55,7 +55,7 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
             Spaces
           </a>
           <a href="#section-room" className="navbar-link">
-            Personal Room
+            Rooms
           </a>
           <a href="#principles" className="navbar-link">
             Principles
@@ -70,10 +70,10 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
             type="button"
             onClick={onOpenSearch}
             className="navbar-search-btn"
-            aria-label="Find people with command palette"
+            aria-label="Search people with command palette"
           >
             <Search size={14} />
-            <span className="navbar-search-label">Find people</span>
+            <span className="navbar-search-label">Search</span>
             <span className="navbar-search-kbd">⌘K</span>
           </button>
           <button
@@ -81,7 +81,7 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
             onClick={() => onEnterApp('dms')}
             className="navbar-cta-btn"
           >
-            <span className="navbar-cta-text-full">Open Holoraa</span>
+            <span className="navbar-cta-text-full">Launch App</span>
             <span className="navbar-cta-text-short">Open</span>
             <ArrowUpRight size={14} />
           </button>

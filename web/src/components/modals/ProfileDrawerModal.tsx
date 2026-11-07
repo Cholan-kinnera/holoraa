@@ -4,6 +4,8 @@ import React, { useEffect } from 'react';
 import type { DirectoryUser } from '../../lib/dsa/search-graph';
 import { getMutualFollowers } from '../../lib/dsa/search-graph';
 import { X } from '../ui/Icons';
+import { Avatar } from '../ui/Avatar';
+import { FollowButton } from '../ui/FollowButton';
 
 interface ProfileDrawerModalProps {
   userId: string | null;
@@ -56,11 +58,10 @@ export function ProfileDrawerModal({
       <div className="w-full max-w-md rounded-[28px] bg-oled-sidebar hairline-border p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Avatar
               src={person.avatar}
-              className="w-16 h-16 rounded-full object-cover ring-2 ring-white/10"
               alt={person.name}
+              size="2xl"
             />
             <div>
               <div className="flex items-center gap-2">
@@ -107,12 +108,11 @@ export function ProfileDrawerModal({
           <div className="flex items-center gap-2 text-[11px] text-ink-secondary">
             <div className="flex -space-x-1.5">
               {mutuals.slice(0, 3).map((m) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Avatar
                   key={m.id}
                   src={m.avatar}
-                  className="w-5 h-5 rounded-full object-cover ring-1 ring-black"
                   alt={m.name}
+                  size="xs"
                 />
               ))}
             </div>
@@ -123,24 +123,19 @@ export function ProfileDrawerModal({
         <div className="flex items-center gap-2.5 pt-1">
           {!isMe ? (
             <>
-              <button
-                type="button"
-                onClick={() => onToggleFollow(person.id)}
-                className={`flex-1 py-2.5 rounded-full text-xs font-medium transition-all ${
-                  isFollowing
-                    ? 'bg-oled-elevated text-white hairline-border hover:bg-neutral-800'
-                    : 'bg-white text-black hover:bg-neutral-200'
-                }`}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
+              <FollowButton
+                isFollowing={isFollowing}
+                onToggle={() => onToggleFollow(person.id)}
+                size="md"
+                className="flex-1"
+              />
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   onOpenDirectChat(person.id);
                 }}
-                className="flex-1 py-2.5 rounded-full bg-oled-surface hover:bg-oled-elevated text-white hairline-border text-xs font-medium transition-all"
+                className="flex-1 py-2 rounded-full bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition-all"
               >
                 Message
               </button>
@@ -149,7 +144,7 @@ export function ProfileDrawerModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2.5 rounded-full bg-white text-black text-xs font-medium hover:bg-neutral-200"
+              className="w-full py-2.5 rounded-full bg-white/10 text-white text-xs font-medium border border-white/15 hover:bg-white/15 transition-colors"
             >
               Done
             </button>

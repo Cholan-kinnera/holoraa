@@ -3,6 +3,7 @@
 import React from 'react';
 import { DoorOpen, Hash, MessageCircle, Search, Sliders, Sparkles } from '../ui/Icons';
 import { BrandMark } from '../ui/Brand';
+import { Avatar } from '../ui/Avatar';
 
 export type WorkspaceTab = 'dms' | 'spot' | 'spaces' | 'room';
 
@@ -32,34 +33,37 @@ export function IconRail({
   avatarUrl,
 }: IconRailProps) {
   return (
-    <aside className="w-16 h-full bg-oled-black hairline-r flex flex-col items-center py-5 justify-between shrink-0 z-20">
+    <aside
+      className="w-16 h-full bg-oled-black hairline-r flex flex-col items-center py-5 justify-between shrink-0 z-20"
+      aria-label="Workspace Navigation"
+    >
       {/* Top Brand Mark (Returns to Landing) */}
       <button
         type="button"
         onClick={onReturnToLanding}
-        className="w-10 h-10 rounded-2xl bg-oled-surface hover:bg-oled-elevated hairline-border flex items-center justify-center transition-all cursor-pointer"
+        className="w-10 h-10 rounded-2xl bg-oled-surface hover:bg-oled-elevated hairline-border flex items-center justify-center transition-all cursor-pointer group"
         title="Back to Landing Page"
       >
-        <BrandMark />
+        <BrandMark className="group-hover:scale-105 transition-transform" />
       </button>
 
-
       {/* Center Primary Navigation Icons */}
-      <div className="flex flex-col items-center gap-3.5">
+      <div className="flex flex-col items-center gap-3">
         {/* 1. Direct Messages */}
         <button
           type="button"
           onClick={() => onSelectTab('dms')}
           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
             activeTab === 'dms'
-              ? 'bg-white text-black'
-              : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+              ? 'bg-white text-black shadow-md'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5'
           }`}
           title="Messages"
+          aria-label="Messages"
         >
           <MessageCircle size={20} />
-          {hasUnread && (
-            <span className="w-2 h-2 rounded-full bg-accent-coral absolute top-2 right-2" />
+          {hasUnread && activeTab !== 'dms' && (
+            <span className="w-2 h-2 rounded-full bg-accent-coral absolute top-2 right-2 ring-2 ring-black" />
           )}
         </button>
 
@@ -69,10 +73,11 @@ export function IconRail({
           onClick={() => onSelectTab('spot')}
           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
             activeTab === 'spot'
-              ? 'bg-white text-black'
-              : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+              ? 'bg-white text-black shadow-md'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5'
           }`}
           title="The Spot · Thoughts & People"
+          aria-label="The Spot · Thoughts & People"
         >
           <Sparkles size={20} />
         </button>
@@ -83,10 +88,11 @@ export function IconRail({
           onClick={() => onSelectTab('spaces')}
           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
             activeTab === 'spaces'
-              ? 'bg-white text-black'
-              : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+              ? 'bg-white text-black shadow-md'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5'
           }`}
           title="Spaces"
+          aria-label="Spaces"
         >
           <Hash size={20} />
         </button>
@@ -97,25 +103,27 @@ export function IconRail({
           onClick={() => onSelectTab('room')}
           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
             activeTab === 'room'
-              ? 'bg-white text-black'
-              : 'text-ink-secondary hover:text-white hover:bg-oled-surface'
+              ? 'bg-white text-black shadow-md'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5'
           }`}
           title="My Personal Room"
+          aria-label="My Personal Room"
         >
           <DoorOpen size={20} />
           {hasKnock && (
-            <span className="w-2 h-2 rounded-full bg-accent-green absolute top-2 right-2 animate-ping" />
+            <span className="w-2.5 h-2.5 rounded-full bg-accent-green absolute top-2 right-2 animate-ping" />
           )}
         </button>
 
-        <div className="w-6 hairline-t my-1" />
+        <div className="w-6 hairline-t my-1 opacity-60" />
 
         {/* Global Command-K Search Trigger */}
         <button
           type="button"
           onClick={onOpenSearch}
-          className="w-11 h-11 rounded-2xl text-ink-secondary hover:text-white hover:bg-oled-surface flex items-center justify-center transition-all"
+          className="w-11 h-11 rounded-2xl text-neutral-400 hover:text-white hover:bg-oled-surface flex items-center justify-center transition-all"
           title="Search People & Thoughts (⌘K)"
+          aria-label="Search People & Thoughts"
         >
           <Search size={20} />
         </button>
@@ -126,8 +134,9 @@ export function IconRail({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="w-10 h-10 rounded-2xl text-ink-secondary hover:text-white hover:bg-oled-surface flex items-center justify-center transition-all"
+          className="w-10 h-10 rounded-2xl text-neutral-400 hover:text-white hover:bg-oled-surface flex items-center justify-center transition-all"
           title="Preferences & Privacy"
+          aria-label="Preferences & Privacy"
         >
           <Sliders size={16} />
         </button>
@@ -135,16 +144,16 @@ export function IconRail({
         <button
           type="button"
           onClick={() => onOpenProfile(currentUserId)}
-          className="relative group"
+          className="relative group focus:outline-none"
           title="View Profile"
+          aria-label="View Your Profile"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Avatar
             src={avatarUrl}
             alt="You"
-            className="w-9 h-9 rounded-full object-cover ring-1 ring-white/15"
+            size="md"
+            presence="online"
           />
-          <span className="w-2.5 h-2.5 rounded-full bg-accent-green ring-2 ring-black absolute bottom-0 right-0" />
         </button>
       </div>
     </aside>
