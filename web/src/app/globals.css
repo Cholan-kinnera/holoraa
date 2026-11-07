@@ -114,8 +114,19 @@ a:hover {
   text-decoration: none;
 }
 
-input, textarea, select, button {
+input, textarea, select {
   font-family: inherit;
+}
+
+button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 input::placeholder,
@@ -2108,11 +2119,31 @@ textarea::placeholder {
 .duration-200 { animation-duration: 200ms; }
 .duration-300 { animation-duration: 300ms; }
 
+/* Width utilities */
+.w-56 { width: 14rem; }
+.w-72 { width: 18rem; }
+.w-76 { width: 19rem; }
+.w-80 { width: 20rem; }
+
+/* Grid utilities */
+.grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
 /* Responsive adjustments */
 @media (min-width: 640px) {
   .sm\:w-80 { width: 20rem; }
+  .sm\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
   .sm\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+  .sm\:pt-24 { padding-top: 6rem; }
   .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm\:flex { display: flex; }
+  .sm\:flex-row { flex-direction: row; }
+  .sm\:inline { display: inline; }
+}
+
+@media (min-width: 768px) {
+  .md\:flex { display: flex; }
+  .md\:hidden { display: none; }
+  .md\:block { display: block; }
 }
 
 @media (min-width: 1024px) {
@@ -2120,6 +2151,26 @@ textarea::placeholder {
   .lg\:hidden { display: none; }
   .lg\:block { display: block; }
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .xl\:w-80 { width: 20rem; }
+}
+
+/* Subtle calm scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .ambient-coral-glow {

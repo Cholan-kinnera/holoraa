@@ -402,7 +402,7 @@ export function HoloraaApp() {
         /* =================================================================== */
         /* VIEW B: 4-COLUMN WORKSPACE                                          */
         /* =================================================================== */
-        <div className="flex h-screen w-screen overflow-hidden bg-oled-black animate-in fade-in duration-300">
+        <div className="flex h-screen w-full overflow-hidden bg-oled-black animate-in fade-in duration-300">
           {/* Column 1: Icon Rail */}
           <IconRail
             activeTab={activeTab}
