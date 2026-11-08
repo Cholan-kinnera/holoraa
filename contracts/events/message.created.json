@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/message.created.v1.json",
+  "title": "MessageCreatedEvent",
+  "description": "Realtime notification broadcast when a new 1:1 direct message is committed to PostgreSQL. Transport: Server-to-client over authenticated WebSocket. Visibility: Active conversation participants who have not blocked the sender.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "type", "timestamp", "payload"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version."
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier."
+    },
+    "type": {
+      "type": "string",
+      "const": "message.created"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp."
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["messageId", "conversationId", "senderId", "clientMessageId", "content", "sequenceNum", "createdAt"],
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Database message UUID."
+        },
+        "conversationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Canonical 1:1 conversation UUID."
+        },
+        "senderId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sender user UUID."
+        },
+        "clientMessageId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client-generated deduplication UUID."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "UTF-8 message text."
+        },
+        "sequenceNum": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Monotonically increasing sequence number per conversation."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

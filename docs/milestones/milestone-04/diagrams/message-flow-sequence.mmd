@@ -1,0 +1,41 @@
+sequenceDiagram
+    autonumber
+    actor Alice as Alice (Sender)
+    participant AliceApp as Alice Client
+    participant API as Go Chi API (:8080)
+    participant DB as PostgreSQL 17
+    participant Hub as Go WebSocket Hub
+    participant BobApp as Bob Client
+    actor Bob as Bob (Recipient)
+
+    Alice->>AliceApp: Types "Coffee at 4?" & sends
+    AliceApp->>AliceApp: Renders bubble with "pending" (clock icon)
+    AliceApp->>Hub: WS Frame: event "message.send" { convId, clientMsgId, content }
+
+    rect rgb(25, 25, 35)
+        Note over API,DB: Single Atomic PostgreSQL Transaction
+        Hub->>DB: Check block status, membership, and status = 'accepted'
+        Hub->>DB: INSERT INTO messages (id, conv_id, sender_id, client_msg_id, content)
+        Hub->>DB: INSERT INTO outbox_events (event_type, payload, target_user_ids, status)
+        Hub->>DB: UPDATE conversations SET updated_at = now()
+    end
+
+    Hub-->>AliceApp: WS Frame: event "message.ack" { clientMsgId, messageId, sequenceNum }
+    AliceApp->>AliceApp: Transition bubble to "sent" (single gray tick)
+
+    Note over Hub,BobApp: At-Least-Once Outbox Dispatch
+    Hub->>BobApp: WS Frame: event "message.created" { message }
+    BobApp->>BobApp: Deduplicate by message.id & render in thread
+    BobApp->>Hub: WS Frame: event "message.delivered" { messageId, conversationId }
+
+    Hub->>DB: UPDATE messages SET delivered_at = now() WHERE id = $msgId
+    Hub->>AliceApp: WS Frame: event "message.status" { messageId, status: "delivered" }
+    AliceApp->>AliceApp: Transition bubble to "delivered" (double gray ticks)
+
+    Note over Bob,BobApp: Visibility Policy Satisfied (Focused for >= 500ms)
+    Bob->>BobApp: Views message in viewport
+    BobApp->>Hub: WS Frame: event "message.read" { convId, messageId }
+
+    Hub->>DB: UPDATE conversation_members SET last_read_message_id = $msgId (Monotonic)
+    Hub->>AliceApp: WS Frame: event "message.status" { messageId, status: "read" }
+    AliceApp->>AliceApp: Transition bubble to "read" (double coral ticks)

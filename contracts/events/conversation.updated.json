@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/conversation.updated.v1.json",
+  "title": "ConversationUpdatedEvent",
+  "description": "Realtime notification broadcast when a conversation's metadata or status changes (e.g. accepted, declined, or new snippet).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "type", "timestamp", "payload"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "const": "conversation.updated"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conversationId", "status", "updatedAt"],
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastMessage": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["id", "senderId", "content", "createdAt"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "senderId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "content": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  }
+}

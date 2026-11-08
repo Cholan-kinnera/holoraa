@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/typing.stopped.v1.json",
+  "title": "TypingStoppedEvent",
+  "description": "Realtime notification broadcast when a user stops typing or typing timeout expires.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "type", "timestamp", "payload"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "const": "typing.stopped"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conversationId", "userId"],
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  }
+}
