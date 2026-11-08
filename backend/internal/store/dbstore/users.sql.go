@@ -88,6 +88,57 @@ func (q *Queries) GetPublicProfile(ctx context.Context, username string) (GetPub
 	return i, err
 }
 
+const getPublicProfileWithRelationship = `-- name: GetPublicProfileWithRelationship :one
+SELECT
+    u.id,
+    u.username,
+    u.display_name,
+    u.bio,
+    u.avatar_url,
+    (SELECT count(*) FROM follows WHERE following_id = u.id) AS followers_count,
+    (SELECT count(*) FROM follows WHERE follower_id = u.id) AS following_count,
+    EXISTS (
+        SELECT 1 FROM follows f
+        WHERE f.follower_id = $1::uuid
+          AND f.following_id = u.id
+    ) AS is_following
+FROM users u
+WHERE u.username = lower($2::text)
+  AND u.username IS NOT NULL
+`
+
+type GetPublicProfileWithRelationshipParams struct {
+	CallerID string `json:"caller_id"`
+	Username string `json:"username"`
+}
+
+type GetPublicProfileWithRelationshipRow struct {
+	ID             string  `json:"id"`
+	Username       *string `json:"username"`
+	DisplayName    *string `json:"display_name"`
+	Bio            *string `json:"bio"`
+	AvatarUrl      *string `json:"avatar_url"`
+	FollowersCount int64   `json:"followers_count"`
+	FollowingCount int64   `json:"following_count"`
+	IsFollowing    bool    `json:"is_following"`
+}
+
+func (q *Queries) GetPublicProfileWithRelationship(ctx context.Context, arg GetPublicProfileWithRelationshipParams) (GetPublicProfileWithRelationshipRow, error) {
+	row := q.db.QueryRow(ctx, getPublicProfileWithRelationship, arg.CallerID, arg.Username)
+	var i GetPublicProfileWithRelationshipRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Bio,
+		&i.AvatarUrl,
+		&i.FollowersCount,
+		&i.FollowingCount,
+		&i.IsFollowing,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 
 SELECT id, username, display_name, bio, avatar_url, created_at, updated_at
@@ -130,4 +181,156 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const searchUsersPrefix = `-- name: SearchUsersPrefix :many
+SELECT
+    u.id,
+    u.username,
+    u.display_name,
+    u.bio,
+    u.avatar_url,
+    EXISTS (
+        SELECT 1 FROM follows f
+        WHERE f.follower_id = $1::uuid
+          AND f.following_id = u.id
+    ) AS is_following
+FROM users u
+WHERE u.username IS NOT NULL
+  AND u.id != $1::uuid
+  AND (
+      u.username ILIKE $2::text || '%'
+      OR u.display_name ILIKE $2::text || '%'
+  )
+ORDER BY
+    CASE WHEN u.username ILIKE $2::text || '%' THEN 0 ELSE 1 END,
+    u.username ASC,
+    u.id ASC
+LIMIT $3::int
+`
+
+type SearchUsersPrefixParams struct {
+	CallerID    string `json:"caller_id"`
+	PrefixQuery string `json:"prefix_query"`
+	LimitVal    int32  `json:"limit_val"`
+}
+
+type SearchUsersPrefixRow struct {
+	ID          string  `json:"id"`
+	Username    *string `json:"username"`
+	DisplayName *string `json:"display_name"`
+	Bio         *string `json:"bio"`
+	AvatarUrl   *string `json:"avatar_url"`
+	IsFollowing bool    `json:"is_following"`
+}
+
+// Fast prefix search used for 1-2 character inputs to bypass expensive trigram calculations.
+func (q *Queries) SearchUsersPrefix(ctx context.Context, arg SearchUsersPrefixParams) ([]SearchUsersPrefixRow, error) {
+	rows, err := q.db.Query(ctx, searchUsersPrefix, arg.CallerID, arg.PrefixQuery, arg.LimitVal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchUsersPrefixRow{}
+	for rows.Next() {
+		var i SearchUsersPrefixRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.DisplayName,
+			&i.Bio,
+			&i.AvatarUrl,
+			&i.IsFollowing,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchUsersTrigram = `-- name: SearchUsersTrigram :many
+SELECT
+    u.id,
+    u.username,
+    u.display_name,
+    u.bio,
+    u.avatar_url,
+    EXISTS (
+        SELECT 1 FROM follows f
+        WHERE f.follower_id = $1::uuid
+          AND f.following_id = u.id
+    ) AS is_following
+FROM users u
+WHERE u.username IS NOT NULL
+  AND u.id != $1::uuid
+  AND (
+      u.username ILIKE '%' || $2::text || '%'
+      OR u.display_name ILIKE '%' || $2::text || '%'
+      OR u.username % $3::text
+      OR u.display_name % $3::text
+  )
+ORDER BY
+    CASE
+        WHEN u.username = lower($3::text) THEN 0
+        WHEN u.username ILIKE lower($2::text) || '%' THEN 1
+        WHEN u.display_name ILIKE $2::text || '%' THEN 2
+        ELSE 3
+    END,
+    similarity(u.username, lower($3::text)) DESC,
+    u.username ASC,
+    u.id ASC
+LIMIT $4::int
+`
+
+type SearchUsersTrigramParams struct {
+	CallerID     string `json:"caller_id"`
+	EscapedQuery string `json:"escaped_query"`
+	RawQuery     string `json:"raw_query"`
+	LimitVal     int32  `json:"limit_val"`
+}
+
+type SearchUsersTrigramRow struct {
+	ID          string  `json:"id"`
+	Username    *string `json:"username"`
+	DisplayName *string `json:"display_name"`
+	Bio         *string `json:"bio"`
+	AvatarUrl   *string `json:"avatar_url"`
+	IsFollowing bool    `json:"is_following"`
+}
+
+// Trigram similarity search used for 3+ character inputs.
+func (q *Queries) SearchUsersTrigram(ctx context.Context, arg SearchUsersTrigramParams) ([]SearchUsersTrigramRow, error) {
+	rows, err := q.db.Query(ctx, searchUsersTrigram,
+		arg.CallerID,
+		arg.EscapedQuery,
+		arg.RawQuery,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchUsersTrigramRow{}
+	for rows.Next() {
+		var i SearchUsersTrigramRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.DisplayName,
+			&i.Bio,
+			&i.AvatarUrl,
+			&i.IsFollowing,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -34,6 +34,12 @@ type EmailOtpChallenge struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
+type Follow struct {
+	FollowerID  string             `json:"follower_id"`
+	FollowingID string             `json:"following_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type Session struct {
 	ID                string             `json:"id"`
 	UserID            string             `json:"user_id"`

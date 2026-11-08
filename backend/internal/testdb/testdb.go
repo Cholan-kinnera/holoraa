@@ -29,7 +29,7 @@ const Env = "HOLORAA_TEST_DATABASE_URL"
 
 // Pool creates a migrated scratch database and returns a pool connected to it.
 // It skips the test when Env is unset.
-func Pool(t *testing.T) *pgxpool.Pool {
+func Pool(t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	admin := os.Getenv(Env)
 	if admin == "" {
@@ -63,7 +63,7 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-func createScratch(ctx context.Context, t *testing.T, admin string) (string, string) {
+func createScratch(ctx context.Context, t testing.TB, admin string) (string, string) {
 	t.Helper()
 	suffix := make([]byte, 6)
 	if _, err := rand.Read(suffix); err != nil {
