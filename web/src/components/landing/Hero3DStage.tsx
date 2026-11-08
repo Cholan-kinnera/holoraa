@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, DoorOpen, Sparkles, SquarePen } from '../ui/Icons';
+import Link from 'next/link';
+import { ArrowRight, Sparkles, SquarePen } from '../ui/Icons';
 import { Avatar } from '../ui/Avatar';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
@@ -89,21 +90,19 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
           <span>Launch Web App</span>
           <ArrowRight size={16} />
         </button>
+        <Link
+          href="/sign-in"
+          className="btn-glass-action"
+        >
+          <span>Sign In</span>
+        </Link>
         <button
           type="button"
           onClick={() => onEnterApp('spot')}
           className="btn-glass-action"
         >
           <Sparkles size={16} className="text-accent-coral" />
-          <span>Explore The Spot</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onEnterApp('room')}
-          className="btn-glass-action"
-        >
-          <DoorOpen size={16} className="text-accent-green" />
-          <span>My Room</span>
+          <span>The Spot</span>
         </button>
       </div>
 

@@ -26,14 +26,25 @@ export function ProfileDrawerModal({
   onToggleFollow,
   onOpenDirectChat,
 }: ProfileDrawerModalProps) {
+  const modalRef = React.useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && userId) {
         onClose();
       }
     };
+    const handlePointerDown = (e: PointerEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointerdown', handlePointerDown);
+    };
   }, [userId, onClose]);
 
   if (!userId) return null;
@@ -55,7 +66,7 @@ export function ProfileDrawerModal({
       aria-labelledby="profile-modal-name"
       className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
     >
-      <div className="w-full max-w-md rounded-[28px] bg-oled-sidebar hairline-border p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div ref={modalRef} className="w-full max-w-md rounded-[28px] bg-oled-sidebar hairline-border p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             <Avatar

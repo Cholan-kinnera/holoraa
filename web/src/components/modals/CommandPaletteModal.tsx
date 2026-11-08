@@ -29,6 +29,7 @@ export function CommandPaletteModal({
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const trie = useMemo(() => buildUserSearchTrie(peopleDirectory), [peopleDirectory]);
   const results = useMemo(
@@ -52,6 +53,20 @@ export function CommandPaletteModal({
       inputRef.current?.focus();
     }
   }, [isOpen]);
+
+  // Outside click dismissal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(e: PointerEvent) {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [isOpen, onClose]);
 
   // Keyboard navigation for arrow keys and Enter
   useEffect(() => {
@@ -90,7 +105,7 @@ export function CommandPaletteModal({
       aria-labelledby="cmd-modal-title"
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-24 p-4"
     >
-      <div className="w-full max-w-xl rounded-[28px] bg-oled-sidebar hairline-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div ref={modalRef} className="w-full max-w-xl rounded-[28px] bg-oled-sidebar hairline-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <h2 id="cmd-modal-title" className="sr-only">
           Search people and thoughts
         </h2>

@@ -78,6 +78,9 @@ export async function verifyCodeAction(_previous: VerifyCodeState, formData: For
     return { error: "Sign-in could not start a session. Try again." };
   }
   await applyCookies(result.cookies);
+  if (!result.user.profileComplete || result.user.username === null) {
+    redirect("/app/profile?setup=1");
+  }
   redirect("/app");
 }
 

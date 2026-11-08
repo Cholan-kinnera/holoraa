@@ -29,16 +29,16 @@ export function validateUsername(raw: string): string | null {
 
 export function validateDisplayName(raw: string): string | null {
   const name = raw.trim();
-  if (name.length < 1 || name.length > 64 || CONTROL_CHARACTER.test(name)) {
-    return "Enter a display name of up to 64 characters.";
+  if (name.length < 1 || name.length > 50 || CONTROL_CHARACTER.test(name)) {
+    return "Enter a display name of up to 50 characters.";
   }
   return null;
 }
 
 export function validateBio(raw: string): string | null {
   const bio = raw.trim();
-  if (bio.length > 300 || CONTROL_CHARACTER.test(bio)) {
-    return "Keep the bio to 300 characters or fewer.";
+  if (bio.length > 160 || CONTROL_CHARACTER.test(bio)) {
+    return "Keep the bio to 160 characters or fewer.";
   }
   return null;
 }

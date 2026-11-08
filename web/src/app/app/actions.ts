@@ -3,7 +3,17 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { saveProfile, signOut } from "@/lib/auth/flows";
+import {
+  followUser,
+  getPublicProfile,
+  saveProfile,
+  searchUsers,
+  signOut,
+  unfollowUser,
+  type FlowResult,
+  type PublicProfile,
+  type UserSummary,
+} from "@/lib/auth/flows";
 import { applyCookies, clearSessionCookies, currentCookieHeader, requestContext } from "@/lib/auth/server";
 import {
   validateAvatarUrl,
@@ -82,5 +92,76 @@ export async function updateProfileAction(_previous: ProfileState, formData: For
 
   // Refresh the layout so the setup banner and the menu show the saved profile.
   revalidatePath("/app", "layout");
+  if (formData.get("isSetup") === "1") {
+    redirect("/app");
+  }
   return { status: "saved", message: "Profile saved." };
+}
+
+/** Authenticated user discovery search action. */
+export async function searchUsersAction(
+  query: string,
+  limit = 10,
+): Promise<FlowResult<{ users: UserSummary[] }>> {
+  const context = await requestContext();
+  if (!context.ok) {
+    return { ok: false, message: context.message };
+  }
+  return searchUsers(context.client, {
+    cookieHeader: await currentCookieHeader(),
+    query,
+    limit,
+  });
+}
+
+/** Fetches a public user profile by username. */
+export async function getPublicProfileAction(
+  username: string,
+): Promise<FlowResult<{ profile: PublicProfile }>> {
+  const context = await requestContext();
+  if (!context.ok) {
+    return { ok: false, message: context.message };
+  }
+  return getPublicProfile(context.client, {
+    cookieHeader: await currentCookieHeader(),
+    username,
+  });
+}
+
+/** Creates a directional follow edge to the target user. */
+export async function followUserAction(
+  username: string,
+): Promise<FlowResult> {
+  const context = await requestContext();
+  if (!context.ok) {
+    return { ok: false, message: context.message };
+  }
+  const result = await followUser(context.client, {
+    origin: context.origin,
+    cookieHeader: await currentCookieHeader(),
+    username,
+  });
+  if (result.ok) {
+    revalidatePath("/app", "layout");
+  }
+  return result;
+}
+
+/** Removes a directional follow edge to the target user. */
+export async function unfollowUserAction(
+  username: string,
+): Promise<FlowResult> {
+  const context = await requestContext();
+  if (!context.ok) {
+    return { ok: false, message: context.message };
+  }
+  const result = await unfollowUser(context.client, {
+    origin: context.origin,
+    cookieHeader: await currentCookieHeader(),
+    username,
+  });
+  if (result.ok) {
+    revalidatePath("/app", "layout");
+  }
+  return result;
 }

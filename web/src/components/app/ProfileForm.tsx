@@ -7,13 +7,14 @@ import type { User } from "@/lib/auth/flows";
 
 const INITIAL: ProfileState = { status: "idle", message: null };
 
-export function ProfileForm({ user }: { user: User }) {
+export function ProfileForm({ user, isSetup = false }: { user: User; isSetup?: boolean }) {
   const [state, action, saving] = useActionState(updateProfileAction, INITIAL);
   const id = useId();
   const messageId = `${id}-message`;
 
   return (
     <form action={action} className="form profile__form">
+      <input type="hidden" name="isSetup" value={isSetup ? "1" : "0"} />
       <p className="muted">
         Signed in as <strong className="strong-break">{user.email}</strong>
       </p>
@@ -38,13 +39,13 @@ export function ProfileForm({ user }: { user: User }) {
 
       <label className="field">
         <span className="field__label">Display name</span>
-        <input className="input" name="displayName" defaultValue={user.displayName ?? ""} required maxLength={64} />
+        <input className="input" name="displayName" defaultValue={user.displayName ?? ""} required maxLength={50} />
       </label>
 
       <label className="field">
         <span className="field__label">Bio</span>
-        <textarea className="textarea" name="bio" defaultValue={user.bio ?? ""} maxLength={300} rows={4} />
-        <span className="field__hint">Up to 300 characters. Leave empty to clear it.</span>
+        <textarea className="textarea" name="bio" defaultValue={user.bio ?? ""} maxLength={160} rows={4} />
+        <span className="field__hint">Up to 160 characters. Leave empty to clear it.</span>
       </label>
 
       <label className="field">
@@ -73,7 +74,7 @@ export function ProfileForm({ user }: { user: User }) {
 
       <div className="form__actions">
         <button className="btn btn--primary" type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save profile"}
+          {saving ? "Saving…" : isSetup ? "Complete profile" : "Save profile"}
         </button>
       </div>
     </form>

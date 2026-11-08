@@ -6,13 +6,15 @@ export function FinalCta() {
       <div className="section__inner">
         <div className="closing glass">
           <h2 className="closing__title" id="closing-title">
-            Simple, private, and still being built.
+            Simple, private, and built for real connection.
           </h2>
-          <p className="muted">Sign-in is not open yet. You can follow what runs today on the status page.</p>
+          <p className="muted">
+            Sign in with a passwordless code to set up your profile, find people, and explore the workspace.
+          </p>
           <div className="closing__actions">
-            <ButtonLink href="/status">Check system status</ButtonLink>
-            <ButtonLink href="#principles" variant="ghost">
-              Read the principles
+            <ButtonLink href="/sign-in">Sign in with email</ButtonLink>
+            <ButtonLink href="/status" variant="ghost">
+              Check system status
             </ButtonLink>
           </div>
         </div>

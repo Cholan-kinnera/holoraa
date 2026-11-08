@@ -25,7 +25,9 @@ export interface ProfileValues {
 }
 
 export type FlowFailure = { ok: false; message: string; expired?: boolean };
-export type FlowResult<T extends object> = ({ ok: true } & T) | FlowFailure;
+export type FlowResult<T = void> =
+  | (T extends void ? { ok: true } : { ok: true } & T)
+  | FlowFailure;
 
 const UNAVAILABLE = "Holoraa cannot be reached right now. Try again shortly.";
 const REFUSED = "This request was refused. Reload the page and try again.";
@@ -185,5 +187,136 @@ export async function saveProfile(
       return { ok: false, message: MESSAGES.profile.expired, expired: true };
     }
     return { ok: false, message: messageFor(response.status, MESSAGES.profile) };
+  });
+}
+
+export type UserSummary = components["schemas"]["UserSummary"];
+export type PublicProfile = components["schemas"]["PublicProfile"];
+
+export async function searchUsers(
+  client: ApiClient,
+  input: { cookieHeader: string | null; query: string; limit?: number },
+): Promise<FlowResult<{ users: UserSummary[] }>> {
+  const trimmed = input.query.trim();
+  if (!trimmed) {
+    return { ok: true, users: [] };
+  }
+  return attempt(async (): Promise<FlowResult<{ users: UserSummary[] }>> => {
+    const { data, response } = await client.GET("/v1/users", {
+      headers: input.cookieHeader ? { cookie: input.cookieHeader } : {},
+      params: {
+        query: {
+          q: trimmed,
+          limit: input.limit ?? 10,
+        },
+      },
+    });
+    if (response.status === 200 && data) {
+      return { ok: true, users: data.users };
+    }
+    if (response.status === 401) {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    if (response.status === 429) {
+      return { ok: false, message: "Too many search requests. Wait a minute and try again." };
+    }
+    return { ok: false, message: GENERIC };
+  });
+}
+
+export async function getPublicProfile(
+  client: ApiClient,
+  input: { cookieHeader: string | null; username: string },
+): Promise<FlowResult<{ profile: PublicProfile }>> {
+  const trimmed = input.username.trim();
+  if (!trimmed) {
+    return { ok: false, message: "No profile has this username." };
+  }
+  return attempt(async (): Promise<FlowResult<{ profile: PublicProfile }>> => {
+    const { data, response } = await client.GET("/v1/users/{username}", {
+      headers: input.cookieHeader ? { cookie: input.cookieHeader } : {},
+      params: {
+        path: { username: trimmed },
+      },
+    });
+    if (response.status === 200 && data) {
+      return { ok: true, profile: data };
+    }
+    if (response.status === 401) {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    if (response.status === 404) {
+      return { ok: false, message: "No profile has this username." };
+    }
+    return { ok: false, message: GENERIC };
+  });
+}
+
+export async function followUser(
+  client: ApiClient,
+  input: { origin: string; cookieHeader: string | null; username: string },
+): Promise<FlowResult> {
+  const trimmed = input.username.trim();
+  return attempt(async (): Promise<FlowResult> => {
+    const session = await loadSession(client, input.cookieHeader);
+    if (session.state !== "signed-in") {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    const { response } = await client.POST("/v1/users/{username}/follow", {
+      headers: requestHeaders(input.origin, input.cookieHeader, session.csrfToken),
+      params: { path: { username: trimmed } },
+    });
+    if (response.status === 204) {
+      return { ok: true };
+    }
+    if (response.status === 400) {
+      return { ok: false, message: "You cannot follow yourself." };
+    }
+    if (response.status === 401) {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    if (response.status === 403) {
+      return { ok: false, message: REFUSED };
+    }
+    if (response.status === 404) {
+      return { ok: false, message: "No profile has this username." };
+    }
+    if (response.status === 429) {
+      return { ok: false, message: "Too many follow requests. Wait a minute and try again." };
+    }
+    return { ok: false, message: GENERIC };
+  });
+}
+
+export async function unfollowUser(
+  client: ApiClient,
+  input: { origin: string; cookieHeader: string | null; username: string },
+): Promise<FlowResult> {
+  const trimmed = input.username.trim();
+  return attempt(async (): Promise<FlowResult> => {
+    const session = await loadSession(client, input.cookieHeader);
+    if (session.state !== "signed-in") {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    const { response } = await client.DELETE("/v1/users/{username}/follow", {
+      headers: requestHeaders(input.origin, input.cookieHeader, session.csrfToken),
+      params: { path: { username: trimmed } },
+    });
+    if (response.status === 204) {
+      return { ok: true };
+    }
+    if (response.status === 401) {
+      return { ok: false, message: MESSAGES.profile.expired, expired: true };
+    }
+    if (response.status === 403) {
+      return { ok: false, message: REFUSED };
+    }
+    if (response.status === 404) {
+      return { ok: false, message: "No profile has this username." };
+    }
+    if (response.status === 429) {
+      return { ok: false, message: "Too many follow requests. Wait a minute and try again." };
+    }
+    return { ok: false, message: GENERIC };
   });
 }

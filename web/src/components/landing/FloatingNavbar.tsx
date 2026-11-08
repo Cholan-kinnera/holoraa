@@ -63,6 +63,9 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
           <Link href="/status" className="navbar-link">
             Status
           </Link>
+          <Link href="/sign-in" className="navbar-link">
+            Sign In
+          </Link>
         </div>
 
         <div className="navbar-actions-group">
@@ -148,10 +151,10 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
             </Link>
             <Link
               href="/sign-in"
-              className="navbar-mobile-link"
+              className="navbar-mobile-link font-medium text-accent-coral"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Sign In (In Development)
+              Sign In
             </Link>
           </div>
         </div>
