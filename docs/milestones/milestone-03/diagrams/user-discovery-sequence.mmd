@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor User as User (Browser)
+    participant Client as Next.js React UI
+    participant BFF as Next.js BFF Server
+    participant API as Go Chi Monolith
+    participant DB as PostgreSQL 17
+
+    User->>Client: Types "aanya" in workspace search
+    Client->>Client: Debounce timer waits 250ms
+
+    Client->>BFF: GET /api/users/search?q=aanya
+    BFF->>API: GET /v1/users?q=aanya (Forwarding Cookie)
+
+    API->>API: Verify session cookie & check search rate limit
+    alt Rate limit exceeded (>60/min)
+        API-->>BFF: 429 Too Many Requests (Retry-After)
+        BFF-->>Client: 429 Problem Details
+        Client-->>User: Display calm rate-limit message
+    else Allowed
+        API->>DB: SearchUsers(caller_id, query="aanya", limit=10)
+        Note over DB: Evaluates GIN Trigram Index & joins follows table
+        DB-->>API: Return candidate rows [Aanya Sharma (@aanya)]
+        API-->>BFF: 200 OK { users: [...] }
+        BFF-->>Client: 200 OK JSON
+        Client-->>User: Render search candidate card
+    end
+
+    User->>Client: Clicks on @aanya candidate
+    Client->>BFF: Fetch public profile /v1/users/aanya
+    BFF->>API: GET /v1/users/aanya (Cookie)
+    API->>DB: GetPublicProfileWithRelationship(caller_id, "aanya")
+    DB-->>API: Return profile + is_following + counts
+    API-->>BFF: 200 OK { publicProfile }
+    BFF-->>Client: 200 OK
+    Client-->>User: Open UserProfileModal (Avatar, Bio, Follow button)
+
+    User->>Client: Clicks "Follow" button
+    Client->>BFF: Server Action: followUserAction("aanya")
+    BFF->>API: POST /v1/users/aanya/follow (Cookie, CSRF, Origin)
+    API->>DB: INSERT INTO follows (follower, following) ON CONFLICT DO NOTHING
+    DB-->>API: 204 No Content
+    API-->>BFF: 204 No Content
+    BFF-->>Client: State updated: isFollowing = true
+    Client-->>User: Button transforms to "Following" (accent styling)
+    Note over User,DB: Milestone 4 Boundary: Following creates a directional relationship edge only; it does NOT initiate a conversation or grant direct messaging permissions.

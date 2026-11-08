@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/message.delivered.v1.json",
+  "title": "MessageDeliveredEvent",
+  "description": "Realtime client delivery acknowledgement sent by recipient application over WebSocket when a message frame is received and rendered.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "type", "timestamp", "payload"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "const": "message.delivered"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conversationId", "messageId"],
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "messageId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  }
+}

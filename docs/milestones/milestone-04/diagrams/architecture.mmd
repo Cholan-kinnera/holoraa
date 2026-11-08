@@ -1,0 +1,26 @@
+flowchart TD
+    BrowserClient["Browser Client (Desktop / Mobile)"]
+    NextBFF["Next.js 16 BFF (Server Actions)"]
+
+    subgraph GoMonolith ["Go Modular Monolith (Strict Single Instance in M4)"]
+        Router["Chi Router (/v1)"]
+        AuthModule["auth (Session & Tickets)"]
+        MsgModule["messaging (Conversations & Rules)"]
+        WSHub["realtime (In-Memory Hub & coder/websocket)"]
+        OutboxEngine["messaging/outbox (Transactional At-Least-Once Dispatcher)"]
+    end
+
+    PostgresDB[("Neon PostgreSQL 17 (Source of Truth)")]
+
+    %% Interactions
+    BrowserClient -->|"HTTP/2 Actions"| NextBFF
+    NextBFF -->|"REST + Cookie"| Router
+    Router --> AuthModule
+    Router --> MsgModule
+
+    BrowserClient -->|"WSS (:443) + Single-Use Ticket"| WSHub
+    MsgModule -->|"Atomic Tx Commit (Message + Outbox)"| PostgresDB
+    OutboxEngine -->|"Claim (SKIP LOCKED)"| PostgresDB
+    OutboxEngine -->|"Dispatch Frames"| WSHub
+    WSHub -->|"Push Event Frames"| BrowserClient
+    BrowserClient -->|"Client Delivery ACK (message.delivered)"| WSHub

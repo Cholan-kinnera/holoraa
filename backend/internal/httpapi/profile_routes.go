@@ -3,7 +3,11 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,7 +19,10 @@ import (
 func (d Deps) registerProfileRoutes(v1 chi.Router) {
 	v1.With(d.requireSession).Get("/me", d.getMe)
 	v1.With(d.originCheck, d.requireSession, d.requireCSRF).Patch("/me", d.patchMe)
+	v1.With(d.requireSession).Get("/users", d.searchUsers)
 	v1.With(d.requireSession).Get("/users/{username}", d.getPublicProfile)
+	v1.With(d.originCheck, d.requireSession, d.requireCSRF).Post("/users/{username}/follow", d.followUser)
+	v1.With(d.originCheck, d.requireSession, d.requireCSRF).Delete("/users/{username}/follow", d.unfollowUser)
 }
 
 type meResponse struct {
@@ -125,6 +132,110 @@ func (d Deps) getPublicProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type searchUsersResponse struct {
+	Users []profile.UserSummary `json:"users"`
+}
+
+func (d Deps) searchUsers(w http.ResponseWriter, r *http.Request) {
+	sess, ok := sessionFrom(r.Context())
+	if !ok {
+		d.writeProblem(w, r, http.StatusUnauthorized, "Sign in to continue.")
+		return
+	}
+
+	if d.SearchLimiter != nil {
+		allowed, retryAfter := d.SearchLimiter.Allow(sess.ID)
+		if !allowed {
+			setRetryAfter(w, int64(math.Ceil(retryAfter.Seconds())))
+			d.writeProblem(w, r, http.StatusTooManyRequests, "Too many search requests. Try again later.")
+			return
+		}
+	}
+
+	rawQ := r.URL.Query().Get("q")
+	q := strings.TrimSpace(rawQ)
+	if utf8.RuneCountInString(q) > 100 {
+		d.writeProblem(w, r, http.StatusBadRequest, "q must be at most 100 characters.")
+		return
+	}
+
+	limit := 10
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil || parsedLimit < 1 || parsedLimit > 20 {
+			d.writeProblem(w, r, http.StatusBadRequest, "limit must be an integer between 1 and 20.")
+			return
+		}
+		limit = parsedLimit
+	}
+
+	if q == "" {
+		writeJSON(w, r, http.StatusOK, searchUsersResponse{Users: []profile.UserSummary{}})
+		return
+	}
+
+	users, err := d.Profiles.Search(r.Context(), sess.UserID, q, limit)
+	if err != nil {
+		d.Log.ErrorContext(r.Context(), "search users failed", "error", err.Error())
+		d.writeProblem(w, r, http.StatusInternalServerError, "An internal error occurred.")
+		return
+	}
+
+	writeJSON(w, r, http.StatusOK, searchUsersResponse{Users: users})
+}
+
+func (d Deps) followUser(w http.ResponseWriter, r *http.Request) {
+	sess, ok := sessionFrom(r.Context())
+	if !ok {
+		d.writeProblem(w, r, http.StatusUnauthorized, "Sign in to continue.")
+		return
+	}
+
+	if d.FollowLimiter != nil {
+		allowed, retryAfter := d.FollowLimiter.Allow(sess.ID)
+		if !allowed {
+			setRetryAfter(w, int64(math.Ceil(retryAfter.Seconds())))
+			d.writeProblem(w, r, http.StatusTooManyRequests, "Too many follow requests. Try again later.")
+			return
+		}
+	}
+
+	targetUsername := chi.URLParam(r, "username")
+	err := d.Profiles.Follow(r.Context(), sess.UserID, targetUsername)
+	if err != nil {
+		d.profileProblem(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (d Deps) unfollowUser(w http.ResponseWriter, r *http.Request) {
+	sess, ok := sessionFrom(r.Context())
+	if !ok {
+		d.writeProblem(w, r, http.StatusUnauthorized, "Sign in to continue.")
+		return
+	}
+
+	if d.FollowLimiter != nil {
+		allowed, retryAfter := d.FollowLimiter.Allow(sess.ID)
+		if !allowed {
+			setRetryAfter(w, int64(math.Ceil(retryAfter.Seconds())))
+			d.writeProblem(w, r, http.StatusTooManyRequests, "Too many follow requests. Try again later.")
+			return
+		}
+	}
+
+	targetUsername := chi.URLParam(r, "username")
+	err := d.Profiles.Unfollow(r.Context(), sess.UserID, targetUsername)
+	if err != nil {
+		d.profileProblem(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // profileProblem maps profile errors to Problem Details. Validation details
 // name the field and rule, never the submitted value.
 func (d Deps) profileProblem(w http.ResponseWriter, r *http.Request, err error) {
@@ -134,6 +245,8 @@ func (d Deps) profileProblem(w http.ResponseWriter, r *http.Request, err error) 
 		d.writeProblem(w, r, http.StatusBadRequest, ve.Field+": "+ve.Reason+".")
 	case errors.Is(err, profile.ErrUsernameTaken):
 		d.writeProblem(w, r, http.StatusConflict, "That username is already taken.")
+	case errors.Is(err, profile.ErrCannotFollowSelf):
+		d.writeProblem(w, r, http.StatusBadRequest, "You cannot follow yourself.")
 	case errors.Is(err, profile.ErrNotFound):
 		d.writeProblem(w, r, http.StatusNotFound, "No profile has this username.")
 	default:

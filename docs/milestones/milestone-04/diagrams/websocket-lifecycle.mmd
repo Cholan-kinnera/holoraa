@@ -1,0 +1,26 @@
+stateDiagram-v2
+    [*] --> Disconnected
+
+    Disconnected --> FetchingTicket : User visits /app
+    FetchingTicket --> Connecting : Single-use ticket received (TTL 60s)
+    FetchingTicket --> Disconnected : Session invalid (redirect /sign-in)
+
+    Connecting --> Connected : 101 Switching Protocols + connection.ready
+    Connecting --> Disconnected : Handshake error / Origin denied
+
+    state Connected {
+        [*] --> Idle
+        Idle --> SendingMessage : User dispatches text
+        SendingMessage --> Idle : message.ack received
+        Idle --> ReceivingMessage : message.created received
+        ReceivingMessage --> Delivering : Dispatch client message.delivered ACK
+        Delivering --> Idle : ACK sent
+        Idle --> ReadingMessage : Visible for >= 500ms
+        ReadingMessage --> Idle : message.read sent
+        Idle --> Heartbeating : 30s ping timer
+        Heartbeating --> Idle : pong received within 10s
+    }
+
+    Connected --> Reconnecting : Network loss / ping timeout / 1001 close
+    Reconnecting --> FetchingTicket : Exponential backoff with full jitter
+    Connected --> Disconnected : Explicit user sign-out

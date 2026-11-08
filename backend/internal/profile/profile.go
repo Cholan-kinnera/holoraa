@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
 	"strings"
@@ -26,8 +27,8 @@ import (
 const (
 	usernameMin        = 3
 	usernameMax        = 32
-	displayNameMax     = 64
-	bioMax             = 300
+	displayNameMax     = 50
+	bioMax             = 160
 	avatarURLMax       = 2048
 	usernameConstraint = "users_username_key"
 )
@@ -47,6 +48,8 @@ var (
 	ErrUsernameTaken = errors.New("username taken")
 	// ErrNotFound means no public profile has the username.
 	ErrNotFound = errors.New("profile not found")
+	// ErrCannotFollowSelf means a user attempted to follow their own account.
+	ErrCannotFollowSelf = errors.New("cannot follow self")
 )
 
 // ValidationError names the field and the rule it broke. The reason never
@@ -115,7 +118,7 @@ func ValidateUsername(raw string) (string, error) {
 func ValidateDisplayName(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
 	if n := utf8.RuneCountInString(s); n < 1 || n > displayNameMax {
-		return "", &ValidationError{Field: "displayName", Reason: "must be 1 to 64 characters"}
+		return "", &ValidationError{Field: "displayName", Reason: "must be 1 to 50 characters"}
 	}
 	if hasControl(s) {
 		return "", &ValidationError{Field: "displayName", Reason: "must not contain control characters"}
@@ -123,28 +126,94 @@ func ValidateDisplayName(raw string) (string, error) {
 	return s, nil
 }
 
-// ValidateBio trims the bio and checks its length and characters. An empty bio is allowed.
-func ValidateBio(raw string) (string, error) {
-	s := strings.TrimSpace(raw)
-	if utf8.RuneCountInString(s) > bioMax {
-		return "", &ValidationError{Field: "bio", Reason: "must be at most 300 characters"}
+// cleanBio strips control characters except newlines, collapses multiple consecutive
+// newlines into a single internal newline, and trims surrounding whitespace.
+func cleanBio(raw string) string {
+	s := strings.ReplaceAll(raw, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if r == '\n' || !unicode.IsControl(r) {
+			b.WriteRune(r)
+		}
 	}
-	if hasControl(s) {
-		return "", &ValidationError{Field: "bio", Reason: "must not contain control characters"}
+	cleaned := b.String()
+
+	for strings.Contains(cleaned, "\n\n") {
+		cleaned = strings.ReplaceAll(cleaned, "\n\n", "\n")
+	}
+
+	return strings.TrimSpace(cleaned)
+}
+
+// ValidateBio trims and cleans the bio, enforcing single internal newlines and stripping
+// control characters, then checks its length. An empty bio is allowed.
+func ValidateBio(raw string) (string, error) {
+	s := cleanBio(raw)
+	if utf8.RuneCountInString(s) > bioMax {
+		return "", &ValidationError{Field: "bio", Reason: "must be at most 160 characters"}
 	}
 	return s, nil
 }
 
-// ValidateAvatarURL accepts only https URLs without credentials, at most 2048 characters.
+// isLocalOrInternalHost reports whether the host represents a loopback, local network,
+// or non-routable address that should be rejected for external avatar images.
+func isLocalOrInternalHost(hostStr string) bool {
+	hostname := hostStr
+	if h, _, err := net.SplitHostPort(hostStr); err == nil {
+		hostname = h
+	}
+	hostname = strings.ToLower(strings.TrimSpace(hostname))
+	if hostname == "" {
+		return true
+	}
+
+	if hostname == "localhost" || hostname == "broadcasthost" ||
+		hostname == "ip6-localhost" || hostname == "ip6-loopback" {
+		return true
+	}
+	for _, suffix := range []string{".localhost", ".local", ".internal", ".lan", ".home.arpa"} {
+		if strings.HasSuffix(hostname, suffix) {
+			return true
+		}
+	}
+
+	if ip := net.ParseIP(hostname); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return true
+		}
+		if ip4 := ip.To4(); ip4 != nil {
+			if ip4.IsLoopback() || ip4.IsPrivate() || ip4.IsLinkLocalUnicast() || ip4.IsLinkLocalMulticast() || ip4.IsUnspecified() {
+				return true
+			}
+		}
+	}
+
+	if !strings.Contains(hostname, ".") {
+		return true
+	}
+
+	return false
+}
+
+// ValidateAvatarURL accepts an empty string or an https URL with a public hostname, at most 2048 characters.
 func ValidateAvatarURL(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "", nil
+	}
 	bad := &ValidationError{Field: "avatarUrl", Reason: "must be an https URL of at most 2048 characters"}
-	if s == "" || len(s) > avatarURLMax {
+	if len(s) > avatarURLMax {
 		return "", bad
 	}
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
 		return "", bad
+	}
+	if isLocalOrInternalHost(u.Host) {
+		return "", &ValidationError{Field: "avatarUrl", Reason: "must not use a local or internal host"}
 	}
 	return s, nil
 }
@@ -209,6 +278,95 @@ func (r *Repo) Public(ctx context.Context, username string) (Public, error) {
 		Bio:         row.Bio,
 		AvatarURL:   row.AvatarUrl,
 	}, nil
+}
+
+// UserSummary represents a discovered user in search results.
+type UserSummary struct {
+	ID          string  `json:"id"`
+	Username    string  `json:"username"`
+	DisplayName *string `json:"displayName"`
+	Bio         *string `json:"bio"`
+	AvatarURL   *string `json:"avatarUrl"`
+	IsFollowing bool    `json:"isFollowing"`
+}
+
+// EscapeLikeWildcards escapes %, _, and \ so that user-provided text can be safely
+// embedded in a SQL LIKE pattern without wildcard injection.
+func EscapeLikeWildcards(raw string) string {
+	s := strings.ReplaceAll(raw, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
+// Search routes queries to prefix or trigram matching based on rune length.
+// Empty or whitespace-only queries return an empty slice immediately without
+// executing a database query.
+func (r *Repo) Search(ctx context.Context, callerID, rawQuery string, limit int) ([]UserSummary, error) {
+	q := strings.TrimSpace(rawQuery)
+	if q == "" {
+		return []UserSummary{}, nil
+	}
+	if limit <= 0 {
+		limit = 10
+	} else if limit > 20 {
+		limit = 20
+	}
+
+	sanitized := EscapeLikeWildcards(q)
+
+	if utf8.RuneCountInString(q) < 3 {
+		rows, err := r.queries.SearchUsersPrefix(ctx, dbstore.SearchUsersPrefixParams{
+			CallerID:    callerID,
+			PrefixQuery: sanitized,
+			LimitVal:    int32(limit),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("search users prefix: %w", err)
+		}
+		res := make([]UserSummary, len(rows))
+		for i, row := range rows {
+			uname := ""
+			if row.Username != nil {
+				uname = *row.Username
+			}
+			res[i] = UserSummary{
+				ID:          row.ID,
+				Username:    uname,
+				DisplayName: row.DisplayName,
+				Bio:         row.Bio,
+				AvatarURL:   row.AvatarUrl,
+				IsFollowing: row.IsFollowing,
+			}
+		}
+		return res, nil
+	}
+
+	rows, err := r.queries.SearchUsersTrigram(ctx, dbstore.SearchUsersTrigramParams{
+		CallerID:     callerID,
+		EscapedQuery: sanitized,
+		RawQuery:     q,
+		LimitVal:     int32(limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("search users trigram: %w", err)
+	}
+	res := make([]UserSummary, len(rows))
+	for i, row := range rows {
+		uname := ""
+		if row.Username != nil {
+			uname = *row.Username
+		}
+		res[i] = UserSummary{
+			ID:          row.ID,
+			Username:    uname,
+			DisplayName: row.DisplayName,
+			Bio:         row.Bio,
+			AvatarURL:   row.AvatarUrl,
+			IsFollowing: row.IsFollowing,
+		}
+	}
+	return res, nil
 }
 
 // Update applies a partial update to userID's profile. Validation runs before
@@ -303,7 +461,11 @@ func validatePatch(p Patch) (update, error) {
 			if v, err = ValidateBio(p.Bio.Value); err != nil {
 				return u, err
 			}
-			u.bio = setting{set: true, value: &v}
+			if v == "" {
+				u.bio = setting{set: true, value: nil}
+			} else {
+				u.bio = setting{set: true, value: &v}
+			}
 		}
 	}
 	if p.AvatarURL.Present {
@@ -314,8 +476,125 @@ func validatePatch(p Patch) (update, error) {
 			if v, err = ValidateAvatarURL(p.AvatarURL.Value); err != nil {
 				return u, err
 			}
-			u.avatarURL = setting{set: true, value: &v}
+			if v == "" {
+				u.avatarURL = setting{set: true, value: nil}
+			} else {
+				u.avatarURL = setting{set: true, value: &v}
+			}
 		}
 	}
 	return u, nil
+}
+
+// Follow creates a directional follow relationship from followerID to followingUsername.
+// It is idempotent: repeated calls succeed without error or duplicate rows.
+// Self-follow attempts are rejected.
+func (r *Repo) Follow(ctx context.Context, followerID, followingUsername string) error {
+	u := strings.ToLower(strings.TrimSpace(followingUsername))
+	if u == "" {
+		return ErrNotFound
+	}
+	target, err := r.Public(ctx, u)
+	if err != nil {
+		return err
+	}
+	if target.ID == followerID {
+		return ErrCannotFollowSelf
+	}
+	err = r.queries.FollowUser(ctx, dbstore.FollowUserParams{
+		FollowerID:        followerID,
+		FollowingUsername: u,
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23514" { // check_violation (follows_no_self_follow)
+				return ErrCannotFollowSelf
+			}
+			if pgErr.Code == "23502" { // not_null_violation (e.g. concurrent user deletion)
+				return ErrNotFound
+			}
+		}
+		return fmt.Errorf("follow user: %w", err)
+	}
+	return nil
+}
+
+// Unfollow removes a directional follow relationship from followerID to followingUsername.
+// It is idempotent: repeated calls succeed without error.
+func (r *Repo) Unfollow(ctx context.Context, followerID, followingUsername string) error {
+	u := strings.ToLower(strings.TrimSpace(followingUsername))
+	if u == "" {
+		return ErrNotFound
+	}
+	_, err := r.Public(ctx, u)
+	if err != nil {
+		return err
+	}
+	err = r.queries.UnfollowUser(ctx, dbstore.UnfollowUserParams{
+		FollowerID:        followerID,
+		FollowingUsername: u,
+	})
+	if err != nil {
+		return fmt.Errorf("unfollow user: %w", err)
+	}
+	return nil
+}
+
+// IsFollowing reports whether followerID follows followingID.
+func (r *Repo) IsFollowing(ctx context.Context, followerID, followingID string) (bool, error) {
+	return r.queries.IsFollowing(ctx, dbstore.IsFollowingParams{
+		FollowerID:  followerID,
+		FollowingID: followingID,
+	})
+}
+
+// FollowCounts returns the followers count and following count for userID.
+func (r *Repo) FollowCounts(ctx context.Context, userID string) (followers int64, following int64, err error) {
+	row, err := r.queries.GetFollowCounts(ctx, userID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("get follow counts: %w", err)
+	}
+	return row.FollowersCount, row.FollowingCount, nil
+}
+
+// PublicWithRelationship represents a public profile with social relationship data relative to the caller.
+type PublicWithRelationship struct {
+	ID             string  `json:"id"`
+	Username       string  `json:"username"`
+	DisplayName    *string `json:"displayName"`
+	Bio            *string `json:"bio"`
+	AvatarURL      *string `json:"avatarUrl"`
+	FollowersCount int64   `json:"followersCount"`
+	FollowingCount int64   `json:"followingCount"`
+	IsFollowing    bool    `json:"isFollowing"`
+}
+
+// PublicWithRelationship returns the public profile with social graph counts and caller follow status.
+func (r *Repo) PublicWithRelationship(ctx context.Context, callerID, username string) (PublicWithRelationship, error) {
+	u := strings.ToLower(strings.TrimSpace(username))
+	row, err := r.queries.GetPublicProfileWithRelationship(ctx, dbstore.GetPublicProfileWithRelationshipParams{
+		CallerID: callerID,
+		Username: u,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PublicWithRelationship{}, ErrNotFound
+	}
+	if err != nil {
+		return PublicWithRelationship{}, fmt.Errorf("read public profile with relationship: %w", err)
+	}
+	uname := ""
+	if row.Username != nil {
+		uname = *row.Username
+	}
+	return PublicWithRelationship{
+		ID:             row.ID,
+		Username:       uname,
+		DisplayName:    row.DisplayName,
+		Bio:            row.Bio,
+		AvatarURL:      row.AvatarUrl,
+		FollowersCount: row.FollowersCount,
+		FollowingCount: row.FollowingCount,
+		IsFollowing:    row.IsFollowing,
+	}, nil
 }

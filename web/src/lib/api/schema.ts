@@ -153,6 +153,26 @@ export interface paths {
         patch: operations["updateMyProfile"];
         trace?: never;
     };
+    "/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search users
+         * @description Returns a list of public user profiles matching query prefix or trigrams.
+         */
+        get: operations["searchUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/users/{username}": {
         parameters: {
             query?: never;
@@ -165,6 +185,218 @@ export interface paths {
          * @description Returns a user's public profile. The email address is never included.
          */
         get: operations["getPublicProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{username}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Follow a user
+         * @description Establishes a directional follow relationship to the target user. Idempotent.
+         */
+        post: operations["followUser"];
+        /**
+         * Unfollow a user
+         * @description Removes a directional follow relationship to the target user. Idempotent.
+         */
+        delete: operations["unfollowUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{username}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block a user
+         * @description Establishes a bidirectional block against the target user. Idempotent.
+         */
+        post: operations["blockUser"];
+        /**
+         * Unblock a user
+         * @description Removes an active block against the target user. Idempotent.
+         */
+        delete: operations["unblockUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List user conversations
+         * @description Returns all active 1:1 direct conversations and message requests for the authenticated caller.
+         */
+        get: operations["listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get or create direct conversation
+         * @description Idempotently creates or retrieves the canonical 1:1 conversation with target user.
+         */
+        post: operations["getOrCreateDirectConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept message request
+         * @description Transitions a pending direct conversation to accepted state.
+         */
+        post: operations["acceptMessageRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline message request
+         * @description Declines or archives a pending message request.
+         */
+        post: operations["declineMessageRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get conversation messages
+         * @description Returns keyset-paginated messages backwards in time.
+         */
+        get: operations["getMessages"];
+        put?: never;
+        /**
+         * Send message
+         * @description Sends a new message in the conversation (REST fallback).
+         */
+        post: operations["sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark conversation read
+         * @description Advances caller's read watermark for the conversation.
+         */
+        post: operations["markConversationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/realtime/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue WebSocket ticket
+         * @description Issues a single-use, 60-second cryptographic token for WebSocket authentication.
+         */
+        post: operations["issueRealtimeTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/realtime/ws": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * WebSocket upgrade
+         * @description Upgrades HTTP connection to bidirectional WebSocket protocol using single-use ticket.
+         */
+        get: operations["upgradeWebSocket"];
         put?: never;
         post?: never;
         delete?: never;
@@ -255,24 +487,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/me/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get user settings */
-        get: operations["getMySettings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update user settings */
-        patch: operations["updateMySettings"];
-        trace?: never;
-    };
     "/v1/rooms/{slug}": {
         parameters: {
             query?: never;
@@ -288,26 +502,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/follows/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Follow user */
-        post: operations["followUser"];
-        /** Unfollow user */
-        delete: operations["unfollowUser"];
         options?: never;
         head?: never;
         patch?: never;
@@ -402,6 +596,18 @@ export interface components {
             bio: string | null;
             avatarUrl: string | null;
         };
+        UserSummary: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            displayName: string | null;
+            bio: string | null;
+            avatarUrl: string | null;
+            isFollowing: boolean;
+        };
+        UserSearchResponse: {
+            users: components["schemas"]["UserSummary"][];
+        };
         /** @description RFC 9457 Problem Details. Internal detail is never included. */
         Problem: {
             /**
@@ -458,20 +664,6 @@ export interface components {
         SetNoteRequest: {
             text: string;
         };
-        UserSettings: {
-            readReceiptsEnabled: boolean;
-            activeStatusEnabled: boolean;
-            quietHoursEnabled: boolean;
-            quietHoursStart: string | null;
-            quietHoursEnd: string | null;
-        };
-        UpdateUserSettingsRequest: {
-            readReceiptsEnabled?: boolean;
-            activeStatusEnabled?: boolean;
-            quietHoursEnabled?: boolean;
-            quietHoursStart?: string | null;
-            quietHoursEnd?: string | null;
-        };
         PersonalRoom: {
             slug: string;
             host: components["schemas"]["PublicProfile"];
@@ -483,6 +675,63 @@ export interface components {
             mutualsCount: number;
             mutualSample: components["schemas"]["PublicProfile"][];
             isFollowing: boolean;
+        };
+        Conversation: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "direct";
+            /** @enum {string} */
+            status: "pending" | "accepted" | "declined";
+            peer: components["schemas"]["PublicProfile"];
+            lastMessage?: components["schemas"]["MessageSnippet"];
+            unreadCount: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        Message: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            senderId: string;
+            /** Format: uuid */
+            clientMessageId: string;
+            content: string;
+            sequenceNum: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            deliveredAt?: string | null;
+        };
+        MessageSnippet: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            senderId: string;
+            content: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateDirectConversationRequest: {
+            targetUsername: string;
+        };
+        SendMessageRequest: {
+            /** Format: uuid */
+            clientMessageId: string;
+            content: string;
+        };
+        MarkReadRequest: {
+            /** Format: uuid */
+            messageId: string;
+        };
+        RealtimeTicketResponse: {
+            ticket: string;
+            /** @example 60 */
+            expiresIn: number;
         };
     };
     responses: {
@@ -749,6 +998,35 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    searchUsers: {
+        parameters: {
+            query?: {
+                /** @description Search term (1 to 100 characters). Empty or whitespace returns an empty list. */
+                q?: string;
+                /** @description Maximum number of results (1 to 20). Defaults to 10. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of discovered users. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSearchResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
     getPublicProfile: {
         parameters: {
             query?: never;
@@ -772,6 +1050,385 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    followUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The target username, case-insensitive. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Follow established or already existed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description Too many follow mutations from this session. Retry-After gives the wait in seconds. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unfollowUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The target username, case-insensitive. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Follow removed or was not present. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description Too many follow mutations from this session. Retry-After gives the wait in seconds. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    blockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The target username, case-insensitive. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block established or was already present. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    unblockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The target username, case-insensitive. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block removed or was not present. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of conversations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        conversations: components["schemas"]["Conversation"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getOrCreateDirectConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDirectConversationRequest"];
+            };
+        };
+        responses: {
+            /** @description Existing canonical conversation returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            /** @description New canonical conversation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptMessageRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    declineMessageRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation declined. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getMessages: {
+        parameters: {
+            query?: {
+                /** @description Return messages created strictly before this message ID (backward history pagination). */
+                before?: string;
+                /** @description Return messages created strictly after this message ID (forward reconnect synchronization). */
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        messages: components["schemas"]["Message"][];
+                        hasMore: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Message committed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    markConversationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Read watermark updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    issueRealtimeTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ticket issued. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeTicketResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    upgradeWebSocket: {
+        parameters: {
+            query: {
+                ticket: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Switching Protocols. */
+            101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             default: components["responses"]["Problem"];
         };
     };
@@ -948,56 +1605,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    getMySettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description User privacy and notification settings. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserSettings"];
-                };
-            };
-            401: components["responses"]["Problem"];
-            default: components["responses"]["Problem"];
-        };
-    };
-    updateMySettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateUserSettingsRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated settings. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserSettings"];
-                };
-            };
-            400: components["responses"]["Problem"];
-            401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
-            default: components["responses"]["Problem"];
-        };
-    };
     getPersonalRoom: {
         parameters: {
             query?: never;
@@ -1020,52 +1627,6 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
-            default: components["responses"]["Problem"];
-        };
-    };
-    followUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successfully followed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Problem"];
-            401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
-            default: components["responses"]["Problem"];
-        };
-    };
-    unfollowUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successfully unfollowed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Problem"];
             default: components["responses"]["Problem"];
         };
     };

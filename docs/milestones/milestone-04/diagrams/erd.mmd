@@ -1,0 +1,77 @@
+erDiagram
+    users {
+        uuid id PK
+        text username UK
+        text display_name
+        text bio
+        text avatar_url
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    conversations {
+        uuid id PK
+        text type "direct"
+        text status "pending | accepted | declined"
+        uuid user_a_id FK
+        uuid user_b_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    conversation_members {
+        uuid conversation_id PK, FK
+        uuid user_id PK, FK
+        uuid last_read_message_id FK
+        timestamptz last_read_at
+        timestamptz joined_at
+    }
+
+    messages {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        uuid client_message_id UK
+        text content
+        bigint sequence_num
+        timestamptz created_at
+        timestamptz delivered_at
+        timestamptz deleted_at
+    }
+
+    outbox_events {
+        bigint id PK
+        text event_type
+        uuid conversation_id FK
+        jsonb payload
+        uuid_array target_user_ids
+        smallint attempts
+        text status "pending | processing | delivered | poison"
+        text error_message
+        timestamptz created_at
+        timestamptz delivered_at
+    }
+
+    blocks {
+        uuid blocker_id PK, FK
+        uuid blocked_id PK, FK
+        timestamptz created_at
+    }
+
+    ws_tickets {
+        bytea ticket_hash PK
+        uuid user_id FK
+        timestamptz expires_at
+        timestamptz created_at
+    }
+
+    users ||--o{ conversations : "participates_as_a"
+    users ||--o{ conversations : "participates_as_b"
+    conversations ||--|{ conversation_members : "has"
+    users ||--o{ conversation_members : "member"
+    conversations ||--o{ messages : "contains"
+    users ||--o{ messages : "sends"
+    conversations ||--o{ outbox_events : "generates"
+    users ||--o{ blocks : "blocker"
+    users ||--o{ blocks : "blocked"
+    users ||--o{ ws_tickets : "issued_for"

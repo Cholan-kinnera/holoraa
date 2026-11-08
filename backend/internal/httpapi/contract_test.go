@@ -39,9 +39,10 @@ type contractDoc struct {
 }
 
 type contractPathItem struct {
-	Get   *contractOperation `yaml:"get"`
-	Post  *contractOperation `yaml:"post"`
-	Patch *contractOperation `yaml:"patch"`
+	Get    *contractOperation `yaml:"get"`
+	Post   *contractOperation `yaml:"post"`
+	Patch  *contractOperation `yaml:"patch"`
+	Delete *contractOperation `yaml:"delete"`
 }
 
 type contractOperation struct {
@@ -76,6 +77,7 @@ type contractSchema struct {
 	MaxLength            *int                      `yaml:"maxLength"`
 	Minimum              *int                      `yaml:"minimum"`
 	Maximum              *int                      `yaml:"maximum"`
+	Items                *contractSchema           `yaml:"items"`
 }
 
 func loadContract(t *testing.T) contractDoc {
@@ -239,6 +241,26 @@ func (d contractDoc) validateValue(t *testing.T, name string, s contractSchema, 
 			problems = append(problems, name+"."+p)
 		}
 		return problems
+	case []any:
+		if !hasType(s, "array") {
+			return []string{fmt.Sprintf("field %q must not be an array", name)}
+		}
+		var problems []string
+		if s.Items != nil {
+			itemSchema := d.resolveSchema(t, *s.Items)
+			for i, elem := range v {
+				elemName := fmt.Sprintf("%s[%d]", name, i)
+				switch elemVal := elem.(type) {
+				case map[string]any:
+					for _, p := range d.validateObject(t, itemSchema, elemVal) {
+						problems = append(problems, elemName+"."+p)
+					}
+				default:
+					problems = append(problems, d.validateValue(t, elemName, itemSchema, elemVal)...)
+				}
+			}
+		}
+		return problems
 	default:
 		t.Fatalf("checker does not support nested values (field %q)", name)
 		return nil
@@ -284,6 +306,8 @@ func exchange(t *testing.T, doc contractDoc, method, template, path string, h ht
 		op = item.Post
 	case http.MethodPatch:
 		op = item.Patch
+	case http.MethodDelete:
+		op = item.Delete
 	default:
 		t.Fatalf("checker does not support method %s", method)
 	}
@@ -428,5 +452,30 @@ func TestContractCheckerRejectsDriftInProfileSchemas(t *testing.T) {
 		if !found {
 			t.Fatalf("checker did not report %q; problems: %v", want, problems)
 		}
+	}
+
+	summary := doc.resolveSchema(t, contractSchema{Ref: "#/components/schemas/UserSummary"})
+	validSummary := map[string]any{
+		"id": "11111111-1111-4111-8111-111111111111", "username": "good_name",
+		"displayName": nil, "bio": nil, "avatarUrl": nil, "isFollowing": false,
+	}
+	if p := doc.validateObject(t, summary, validSummary); len(p) != 0 {
+		t.Fatalf("a valid user summary was rejected: %v", p)
+	}
+
+	badSummary := map[string]any{
+		"id": "11111111-1111-4111-8111-111111111111", "username": "good_name",
+		"displayName": nil, "bio": nil, "avatarUrl": nil, "isFollowing": false,
+		"email": "leaked@example.test",
+	}
+	summaryProblems := doc.validateObject(t, summary, badSummary)
+	foundUnexpected := false
+	for _, p := range summaryProblems {
+		if strings.Contains(p, "unexpected field") {
+			foundUnexpected = true
+		}
+	}
+	if !foundUnexpected {
+		t.Fatalf("checker did not report unexpected field for leaked email in UserSummary: %v", summaryProblems)
 	}
 }

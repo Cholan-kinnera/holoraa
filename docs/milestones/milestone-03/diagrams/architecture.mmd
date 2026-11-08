@@ -1,0 +1,51 @@
+flowchart TD
+    subgraph Browser ["Client Tier: Next.js + React 19"]
+        Workspace["Workspace Shell (ContextDrawer)"]
+        SearchUI["Debounced Search Typeahead"]
+        ProfileModal["User Profile & Follow Modal"]
+        SetupGate["Profile Onboarding Form (/app/profile)"]
+    end
+
+    subgraph BFF ["Next.js Server Layer (BFF)"]
+        AppGate["AppLayout Gate (!profileComplete redirect)"]
+        SearchProxy["Search API Proxy (/api/users/search)"]
+        Actions["Server Actions: updateProfile / followUser"]
+    end
+
+    subgraph Backend ["Go Modular Monolith (127.0.0.1:8080)"]
+        Mux["Chi Mux Engine"]
+        SecMW["Security MW (Session, CSRF, Origin, RateLimiter)"]
+        ProfSvc["Profile Service (Me, PatchMe, Public)"]
+        DiscSvc["Discovery Service (SearchUsers, Typeahead)"]
+        RelSvc["Relationship Service (Follow, Unfollow)"]
+        Repo["Repository Tier (sqlc + pgxpool)"]
+    end
+
+    subgraph DB ["PostgreSQL 17 Database Engine"]
+        UsersTab["users (id, username, display_name, bio, avatar_url)"]
+        IdentTab["email_identities (email, user_id)"]
+        FollowTab["follows (follower_id, following_id, created_at)"]
+        TrgmIdx["GIN Trigram Indexes (pg_trgm)"]
+    end
+
+    SearchUI -->|Debounced query >= 1 char| SearchProxy
+    ProfileModal -->|Follow / Unfollow action| Actions
+    SetupGate -->|Submit username & display name| Actions
+    Workspace -->|Check session state| AppGate
+
+    SearchProxy -->|GET /v1/users?q=... + Session Cookie| Mux
+    Actions -->|PATCH /v1/me or POST /v1/users/{u}/follow| Mux
+
+    Mux --> SecMW
+    SecMW --> ProfSvc
+    SecMW --> DiscSvc
+    SecMW --> RelSvc
+
+    ProfSvc --> Repo
+    DiscSvc --> Repo
+    RelSvc --> Repo
+
+    Repo --> UsersTab
+    Repo --> IdentTab
+    Repo --> FollowTab
+    Repo --> TrgmIdx

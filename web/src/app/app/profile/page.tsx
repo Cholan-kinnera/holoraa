@@ -9,12 +9,17 @@ export const metadata = {
   title: "Profile",
 };
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ setup?: string }>;
+}) {
   const session = await getSession();
   if (session.state !== "signed-in") {
     redirect("/sign-in");
   }
-  const needsSetup = !session.user.profileComplete;
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const needsSetup = resolvedParams?.setup === "1" || !session.user.profileComplete;
 
   return (
     <section className="profile" aria-labelledby="profile-title">
@@ -29,7 +34,7 @@ export default async function ProfilePage() {
           Choose a username to finish setting up your profile.
         </p>
       ) : null}
-      <ProfileForm user={session.user} />
+      <ProfileForm user={session.user} isSetup={needsSetup} />
     </section>
   );
 }

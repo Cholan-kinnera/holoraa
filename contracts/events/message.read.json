@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holoraa.app/schemas/events/message.read.v1.json",
+  "title": "MessageReadEvent",
+  "description": "Realtime notification broadcast when a conversation member reads messages and advances their read watermark. Triggered when recipient satisfies visibility policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "type", "timestamp", "payload"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "const": "message.read"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conversationId", "userId", "messageId", "readAt"],
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User who advanced their read watermark."
+        },
+        "messageId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Highest read message ID."
+        },
+        "readAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

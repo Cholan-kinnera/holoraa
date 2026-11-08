@@ -39,15 +39,23 @@ type ctxKey struct{}
 // Deps are the collaborators the router needs. Auth and Profiles are optional:
 // when Auth is nil, the sign-in and profile routes are not registered.
 type Deps struct {
-	Log      *slog.Logger
-	Health   *health.Handler
-	Auth     *auth.Service
-	Profiles *profile.Repo
-	Security Security
+	Log           *slog.Logger
+	Health        *health.Handler
+	Auth          *auth.Service
+	Profiles      *profile.Repo
+	Security      Security
+	SearchLimiter *SearchLimiter
+	FollowLimiter *SlidingLimiter
 }
 
 // NewRouter returns the API handler.
 func NewRouter(d Deps) http.Handler {
+	if d.SearchLimiter == nil {
+		d.SearchLimiter = NewSearchLimiter(60, time.Minute)
+	}
+	if d.FollowLimiter == nil {
+		d.FollowLimiter = NewSlidingLimiter(30, time.Minute)
+	}
 	r := chi.NewRouter()
 	r.Use(securityHeaders)
 	r.Use(requestLimits(d.Log))

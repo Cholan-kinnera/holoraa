@@ -35,17 +35,18 @@ describe("validateUsername", () => {
 describe("validateDisplayName", () => {
   it("refuses empty names, long names, and control characters", () => {
     expect(validateDisplayName("   ")).not.toBeNull();
-    expect(validateDisplayName("x".repeat(65))).not.toBeNull();
+    expect(validateDisplayName("x".repeat(51))).not.toBeNull();
+    expect(validateDisplayName("x".repeat(50))).toBeNull();
     expect(validateDisplayName("bad\u0007name")).not.toBeNull();
     expect(validateDisplayName("Ada")).toBeNull();
   });
 });
 
 describe("validateBio", () => {
-  it("accepts an empty bio and refuses one over 300 characters", () => {
+  it("accepts an empty bio and refuses one over 160 characters", () => {
     expect(validateBio("")).toBeNull();
-    expect(validateBio("x".repeat(300))).toBeNull();
-    expect(validateBio("x".repeat(301))).not.toBeNull();
+    expect(validateBio("x".repeat(160))).toBeNull();
+    expect(validateBio("x".repeat(161))).not.toBeNull();
   });
 });
 

@@ -226,6 +226,45 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/users:
+    get:
+      operationId: searchUsers
+      summary: Search users
+      description: Returns a list of public user profiles matching query prefix or trigrams.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search term (1 to 100 characters). Empty or whitespace returns an empty list.
+          schema:
+            type: string
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results (1 to 20). Defaults to 10.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        "200":
+          description: List of discovered users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSearchResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/users/{username}:
     get:
       operationId: getPublicProfile
@@ -252,6 +291,436 @@ paths:
         "401":
           $ref: "#/components/responses/Problem"
         "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/users/{username}/follow:
+    post:
+      operationId: followUser
+      summary: Follow a user
+      description: Establishes a directional follow relationship to the target user. Idempotent.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The target username, case-insensitive.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 32
+      responses:
+        "204":
+          description: Follow established or already existed.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "429":
+          description: Too many follow mutations from this session. Retry-After gives the wait in seconds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: unfollowUser
+      summary: Unfollow a user
+      description: Removes a directional follow relationship to the target user. Idempotent.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The target username, case-insensitive.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 32
+      responses:
+        "204":
+          description: Follow removed or was not present.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "429":
+          description: Too many follow mutations from this session. Retry-After gives the wait in seconds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/users/{username}/block:
+    post:
+      operationId: blockUser
+      summary: Block a user
+      description: Establishes a bidirectional block against the target user. Idempotent.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The target username, case-insensitive.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 32
+      responses:
+        "204":
+          description: Block established or was already present.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: unblockUser
+      summary: Unblock a user
+      description: Removes an active block against the target user. Idempotent.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The target username, case-insensitive.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 32
+      responses:
+        "204":
+          description: Block removed or was not present.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations:
+    get:
+      operationId: listConversations
+      summary: List user conversations
+      description: Returns all active 1:1 direct conversations and message requests for the authenticated caller.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: List of conversations.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [conversations]
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/direct:
+    post:
+      operationId: getOrCreateDirectConversation
+      summary: Get or create direct conversation
+      description: Idempotently creates or retrieves the canonical 1:1 conversation with target user.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDirectConversationRequest"
+      responses:
+        "200":
+          description: Existing canonical conversation returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "201":
+          description: New canonical conversation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/{id}/accept:
+    post:
+      operationId: acceptMessageRequest
+      summary: Accept message request
+      description: Transitions a pending direct conversation to accepted state.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/{id}/decline:
+    post:
+      operationId: declineMessageRequest
+      summary: Decline message request
+      description: Declines or archives a pending message request.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation declined.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/{id}/messages:
+    get:
+      operationId: getMessages
+      summary: Get conversation messages
+      description: Returns keyset-paginated messages backwards in time.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: before
+          in: query
+          required: false
+          description: Return messages created strictly before this message ID (backward history pagination).
+          schema:
+            type: string
+            format: uuid
+        - name: after
+          in: query
+          required: false
+          description: Return messages created strictly after this message ID (forward reconnect synchronization).
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: List of messages.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [messages, hasMore]
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+                  hasMore:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: sendMessage
+      summary: Send message
+      description: Sends a new message in the conversation (REST fallback).
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Message committed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/{id}/read:
+    post:
+      operationId: markConversationRead
+      summary: Mark conversation read
+      description: Advances caller's read watermark for the conversation.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadRequest"
+      responses:
+        "204":
+          description: Read watermark updated.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/realtime/ticket:
+    post:
+      operationId: issueRealtimeTicket
+      summary: Issue WebSocket ticket
+      description: Issues a single-use, 60-second cryptographic token for WebSocket authentication.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        "201":
+          description: Ticket issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealtimeTicketResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/realtime/ws:
+    get:
+      operationId: upgradeWebSocket
+      summary: WebSocket upgrade
+      description: Upgrades HTTP connection to bidirectional WebSocket protocol using single-use ticket.
+      security: []
+      parameters:
+        - name: ticket
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      responses:
+        "101":
+          description: Switching Protocols.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -430,50 +899,6 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
-  /v1/me/settings:
-    get:
-      operationId: getMySettings
-      summary: Get user settings
-      security:
-        - sessionCookie: []
-      responses:
-        "200":
-          description: User privacy and notification settings.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserSettings"
-        "401":
-          $ref: "#/components/responses/Problem"
-        default:
-          $ref: "#/components/responses/Problem"
-    patch:
-      operationId: updateMySettings
-      summary: Update user settings
-      security:
-        - sessionCookie: []
-          csrfToken: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateUserSettingsRequest"
-      responses:
-        "200":
-          description: Updated settings.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserSettings"
-        "400":
-          $ref: "#/components/responses/Problem"
-        "401":
-          $ref: "#/components/responses/Problem"
-        "403":
-          $ref: "#/components/responses/Problem"
-        default:
-          $ref: "#/components/responses/Problem"
   /v1/rooms/{slug}:
     get:
       operationId: getPersonalRoom
@@ -498,44 +923,6 @@ paths:
         "401":
           $ref: "#/components/responses/Problem"
         "404":
-          $ref: "#/components/responses/Problem"
-        default:
-          $ref: "#/components/responses/Problem"
-  /v1/follows/{userId}:
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    post:
-      operationId: followUser
-      summary: Follow user
-      security:
-        - sessionCookie: []
-          csrfToken: []
-      responses:
-        "204":
-          description: Successfully followed.
-        "400":
-          $ref: "#/components/responses/Problem"
-        "401":
-          $ref: "#/components/responses/Problem"
-        "403":
-          $ref: "#/components/responses/Problem"
-        default:
-          $ref: "#/components/responses/Problem"
-    delete:
-      operationId: unfollowUser
-      summary: Unfollow user
-      security:
-        - sessionCookie: []
-          csrfToken: []
-      responses:
-        "204":
-          description: Successfully unfollowed.
-        "401":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -725,6 +1112,34 @@ components:
           type: [string, "null"]
         avatarUrl:
           type: [string, "null"]
+    UserSummary:
+      type: object
+      additionalProperties: false
+      required: [id, username, displayName, bio, avatarUrl, isFollowing]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+        displayName:
+          type: [string, "null"]
+        bio:
+          type: [string, "null"]
+        avatarUrl:
+          type: [string, "null"]
+        isFollowing:
+          type: boolean
+    UserSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [users]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserSummary"
     Problem:
       type: object
       description: RFC 9457 Problem Details. Internal detail is never included.
@@ -846,35 +1261,6 @@ components:
           type: string
           minLength: 1
           maxLength: 60
-    UserSettings:
-      type: object
-      additionalProperties: false
-      required: [readReceiptsEnabled, activeStatusEnabled, quietHoursEnabled, quietHoursStart, quietHoursEnd]
-      properties:
-        readReceiptsEnabled:
-          type: boolean
-        activeStatusEnabled:
-          type: boolean
-        quietHoursEnabled:
-          type: boolean
-        quietHoursStart:
-          type: [string, "null"]
-        quietHoursEnd:
-          type: [string, "null"]
-    UpdateUserSettingsRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        readReceiptsEnabled:
-          type: boolean
-        activeStatusEnabled:
-          type: boolean
-        quietHoursEnabled:
-          type: boolean
-        quietHoursStart:
-          type: [string, "null"]
-        quietHoursEnd:
-          type: [string, "null"]
     PersonalRoom:
       type: object
       additionalProperties: false
@@ -905,3 +1291,114 @@ components:
             $ref: "#/components/schemas/PublicProfile"
         isFollowing:
           type: boolean
+    Conversation:
+      type: object
+      additionalProperties: false
+      required: [id, type, status, peer, unreadCount, updatedAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [direct]
+        status:
+          type: string
+          enum: [pending, accepted, declined]
+        peer:
+          $ref: "#/components/schemas/PublicProfile"
+        lastMessage:
+          $ref: "#/components/schemas/MessageSnippet"
+        unreadCount:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    Message:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, senderId, clientMessageId, content, sequenceNum, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        clientMessageId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        sequenceNum:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: [string, "null"]
+          format: date-time
+    MessageSnippet:
+      type: object
+      additionalProperties: false
+      required: [id, senderId, content, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CreateDirectConversationRequest:
+      type: object
+      additionalProperties: false
+      required: [targetUsername]
+      properties:
+        targetUsername:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{2,31}$"
+    SendMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [clientMessageId, content]
+      properties:
+        clientMessageId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    MarkReadRequest:
+      type: object
+      additionalProperties: false
+      required: [messageId]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+    RealtimeTicketResponse:
+      type: object
+      additionalProperties: false
+      required: [ticket, expiresIn]
+      properties:
+        ticket:
+          type: string
+        expiresIn:
+          type: integer
+          example: 60

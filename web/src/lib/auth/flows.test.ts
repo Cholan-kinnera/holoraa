@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { ApiClient } from "@/lib/api/client";
 
-import { loadSession, MESSAGES, saveProfile, sendCode, signOut, verifyCode } from "./flows";
+import {
+  followUser,
+  getPublicProfile,
+  loadSession,
+  MESSAGES,
+  saveProfile,
+  searchUsers,
+  sendCode,
+  signOut,
+  unfollowUser,
+  verifyCode,
+} from "./flows";
 
 interface Recorded {
   method: string;
@@ -24,11 +35,21 @@ interface Reply {
  * a network failure.
  */
 function fakeClient(replies: Record<string, Reply | Error>, calls: Recorded[] = []): ApiClient {
-  const handle = async (method: string, path: string, init?: { headers?: Record<string, string>; body?: unknown }) => {
-    calls.push({ method, path, headers: init?.headers ?? {}, body: init?.body });
-    const reply = replies[`${method} ${path}`];
+  const handle = async (
+    method: string,
+    path: string,
+    init?: { headers?: Record<string, string>; body?: unknown; params?: { path?: Record<string, string> } },
+  ) => {
+    let resolvedPath = path;
+    if (init?.params?.path) {
+      for (const [k, v] of Object.entries(init.params.path)) {
+        resolvedPath = resolvedPath.replace(`{${k}}`, v);
+      }
+    }
+    calls.push({ method, path: resolvedPath, headers: init?.headers ?? {}, body: init?.body });
+    const reply = replies[`${method} ${resolvedPath}`] ?? replies[`${method} ${path}`];
     if (reply === undefined) {
-      throw new Error(`unexpected ${method} ${path}`);
+      throw new Error(`unexpected ${method} ${resolvedPath}`);
     }
     if (reply instanceof Error) {
       throw reply;
@@ -48,6 +69,7 @@ function fakeClient(replies: Record<string, Reply | Error>, calls: Recorded[] = 
     GET: (path: string, init?: object) => handle("GET", path, init),
     POST: (path: string, init?: object) => handle("POST", path, init),
     PATCH: (path: string, init?: object) => handle("PATCH", path, init),
+    DELETE: (path: string, init?: object) => handle("DELETE", path, init),
   } as unknown as ApiClient;
 }
 
@@ -222,5 +244,82 @@ describe("saveProfile", () => {
     expect(
       await saveProfile(client, { origin: "http://127.0.0.1:3000", cookieHeader: "holoraa_session=t", values }),
     ).toEqual({ ok: false, message: MESSAGES.profile[409] });
+  });
+});
+
+describe("searchUsers", () => {
+  it("returns empty without request on blank query", async () => {
+    const calls: Recorded[] = [];
+    const client = fakeClient({}, calls);
+    const res = await searchUsers(client, { cookieHeader: "holoraa_session=t", query: "   " });
+    expect(res).toEqual({ ok: true, users: [] });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("returns users on 200", async () => {
+    const users = [
+      { id: "1", username: "bob", displayName: "Bob", bio: null, avatarUrl: null, isFollowing: false },
+    ];
+    const client = fakeClient({
+      "GET /v1/users": { status: 200, body: { users } },
+    });
+    const res = await searchUsers(client, { cookieHeader: "holoraa_session=t", query: "bob" });
+    expect(res).toEqual({ ok: true, users });
+  });
+
+  it("handles 429 rate limit error", async () => {
+    const client = fakeClient({
+      "GET /v1/users": { status: 429 },
+    });
+    const res = await searchUsers(client, { cookieHeader: "holoraa_session=t", query: "bob" });
+    expect(res).toEqual({ ok: false, message: "Too many search requests. Wait a minute and try again." });
+  });
+});
+
+describe("getPublicProfile", () => {
+  it("returns profile on 200", async () => {
+    const profile = { id: "1", username: "bob", displayName: "Bob", bio: null, avatarUrl: null };
+    const client = fakeClient({
+      "GET /v1/users/bob": { status: 200, body: profile },
+    });
+    const res = await getPublicProfile(client, { cookieHeader: "holoraa_session=t", username: "bob" });
+    expect(res).toEqual({ ok: true, profile });
+  });
+
+  it("handles 404 not found", async () => {
+    const client = fakeClient({
+      "GET /v1/users/ghost": { status: 404 },
+    });
+    const res = await getPublicProfile(client, { cookieHeader: "holoraa_session=t", username: "ghost" });
+    expect(res).toEqual({ ok: false, message: "No profile has this username." });
+  });
+});
+
+describe("followUser and unfollowUser", () => {
+  it("follow returns ok on 204", async () => {
+    const client = fakeClient({
+      "GET /v1/auth/session": { status: 200, body: { user, csrfToken: "c" } },
+      "POST /v1/users/bob/follow": { status: 204 },
+    });
+    const res = await followUser(client, { origin: "http://127.0.0.1:3000", cookieHeader: "holoraa_session=t", username: "bob" });
+    expect(res).toEqual({ ok: true });
+  });
+
+  it("follow maps 400 self-follow to friendly error", async () => {
+    const client = fakeClient({
+      "GET /v1/auth/session": { status: 200, body: { user, csrfToken: "c" } },
+      "POST /v1/users/ada/follow": { status: 400 },
+    });
+    const res = await followUser(client, { origin: "http://127.0.0.1:3000", cookieHeader: "holoraa_session=t", username: "ada" });
+    expect(res).toEqual({ ok: false, message: "You cannot follow yourself." });
+  });
+
+  it("unfollow returns ok on 204", async () => {
+    const client = fakeClient({
+      "GET /v1/auth/session": { status: 200, body: { user, csrfToken: "c" } },
+      "DELETE /v1/users/bob/follow": { status: 204 },
+    });
+    const res = await unfollowUser(client, { origin: "http://127.0.0.1:3000", cookieHeader: "holoraa_session=t", username: "bob" });
+    expect(res).toEqual({ ok: true });
   });
 });
