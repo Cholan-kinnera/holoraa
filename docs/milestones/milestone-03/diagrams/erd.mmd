@@ -1,0 +1,45 @@
+erDiagram
+    USERS ||--o{ EMAIL_IDENTITIES : "authenticated by"
+    USERS ||--o{ SESSIONS : "holds active"
+    USERS ||--o{ FOLLOWS : "follows (as follower)"
+    USERS ||--o{ FOLLOWS : "followed by (as following)"
+
+    USERS {
+        uuid id PK "gen_random_uuid()"
+        text username UK "unique, 3-32 chars, nullable until setup"
+        text display_name "1-64 UTF-8 chars"
+        text bio "up to 300 chars, nullable"
+        text avatar_url "https URL, up to 2048 chars"
+        timestamptz created_at "default now()"
+        timestamptz updated_at "default now()"
+    }
+
+    EMAIL_IDENTITIES {
+        text email PK "normalized lowercase email"
+        uuid user_id FK "references users(id) ON DELETE CASCADE"
+        timestamptz created_at "default now()"
+        timestamptz verified_at "default now()"
+    }
+
+    SESSIONS {
+        uuid id PK "gen_random_uuid()"
+        uuid user_id FK "references users(id) ON DELETE CASCADE"
+        bytea token_hash UK "SHA-256 digest (32 bytes)"
+        timestamptz idle_expires_at "now() + 14d, sliding"
+        timestamptz absolute_expires_at "now() + 30d, hard ceiling"
+        timestamptz revoked_at "nullable, set on logout/rotation"
+    }
+
+    FOLLOWS {
+        uuid follower_id PK,FK "references users(id) ON DELETE CASCADE"
+        uuid following_id PK,FK "references users(id) ON DELETE CASCADE"
+        timestamptz created_at "default now()"
+    }
+
+    AUTH_EVENTS {
+        bigint id PK "generated always as identity"
+        text kind "otp_sent or verify_failed"
+        bytea ip_hash "HMAC-SHA256(secret, client_ip)"
+        bytea email_hash "HMAC-SHA256(secret, email)"
+        timestamptz created_at "default now()"
+    }

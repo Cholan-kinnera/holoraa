@@ -1,0 +1,34 @@
+stateDiagram-v2
+    [*] --> Unauthenticated: User arrives at Holoraa
+
+    Unauthenticated --> AuthenticatedIncomplete: Verifies email OTP code
+    note right of AuthenticatedIncomplete
+        users table row created.
+        username IS NULL.
+        profileComplete: false.
+        Restricted to /app/profile?setup=1.
+    end note
+
+    AuthenticatedIncomplete --> ValidatingHandle: User enters proposed username
+    ValidatingHandle --> HandleCollision: Database unique constraint error (23505)
+    HandleCollision --> AuthenticatedIncomplete: Inline warning ("Username taken")
+
+    ValidatingHandle --> HandleReserved: Reserved word match (admin, root, me, etc.)
+    HandleReserved --> AuthenticatedIncomplete: Inline warning ("Username reserved")
+
+    ValidatingHandle --> ProfileActive: Available & valid syntax committed
+    note right of ProfileActive
+        users.username set.
+        profileComplete: true.
+        Full workspace access granted.
+        Searchable in user discovery.
+    end note
+
+    ProfileActive --> EditingProfile: Opens profile settings
+    EditingProfile --> ProfileActive: Discards changes
+    EditingProfile --> UpdatingProfile: Submits PATCH /v1/me (Bio, Display Name, Avatar)
+
+    UpdatingProfile --> ProfileActive: 200 OK (Updates revalidated in UI)
+    UpdatingProfile --> EditingProfile: Validation error (Control chars, URL invalid)
+
+    ProfileActive --> Unauthenticated: User signs out / session expires
