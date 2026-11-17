@@ -226,6 +226,50 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/me/settings:
+    get:
+      operationId: getMySettings
+      summary: Get user settings
+      description: Returns the user's persistent privacy preferences, including read receipts.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Settings returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateMySettings
+      summary: Update user settings
+      description: Updates the user's persistent privacy preferences.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserSettingsRequest"
+      responses:
+        "200":
+          description: Settings updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/users:
     get:
       operationId: searchUsers
@@ -424,7 +468,7 @@ paths:
     get:
       operationId: listConversations
       summary: List user conversations
-      description: Returns all active 1:1 direct conversations and message requests for the authenticated caller.
+      description: Returns all canonical 1:1 direct conversations (pending, accepted, and declined) for the authenticated caller.
       security:
         - sessionCookie: []
       responses:
@@ -449,7 +493,7 @@ paths:
     post:
       operationId: getOrCreateDirectConversation
       summary: Get or create direct conversation
-      description: Idempotently creates or retrieves the canonical 1:1 conversation with target user.
+      description: Idempotently creates or retrieves the canonical 1:1 conversation with target user. Returns 403 Forbidden if a block exists or if the canonical conversation was previously declined (terminal in MVP; mutual follows do not override declined).
       security:
         - sessionCookie: []
           csrfToken: []
@@ -461,7 +505,7 @@ paths:
               $ref: "#/components/schemas/CreateDirectConversationRequest"
       responses:
         "200":
-          description: Existing canonical conversation returned.
+          description: Existing canonical conversation (pending or accepted) returned.
           content:
             application/json:
               schema:
@@ -481,6 +525,37 @@ paths:
         "404":
           $ref: "#/components/responses/Problem"
         "429":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/conversations/{id}:
+    get:
+      operationId: getConversation
+      summary: Get conversation
+      description: Returns a canonical 1:1 direct conversation (including declined status) for a participating member.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -596,6 +671,8 @@ paths:
                       $ref: "#/components/schemas/Message"
                   hasMore:
                     type: boolean
+        "400":
+          $ref: "#/components/responses/Problem"
         "401":
           $ref: "#/components/responses/Problem"
         "403":
@@ -704,12 +781,13 @@ paths:
     get:
       operationId: upgradeWebSocket
       summary: WebSocket upgrade
-      description: Upgrades HTTP connection to bidirectional WebSocket protocol using single-use ticket.
+      description: Upgrades HTTP connection to bidirectional WebSocket protocol using a single-use ticket carried in Sec-WebSocket-Protocol ("holoraa, holoraa-ticket.<ticket>"). Query-string credentials and session cookies are rejected.
       security: []
       parameters:
-        - name: ticket
-          in: query
+        - name: Sec-WebSocket-Protocol
+          in: header
           required: true
+          description: Subprotocol list offering "holoraa" and "holoraa-ticket.<ticket>". Server responds with "holoraa" only.
           schema:
             type: string
             minLength: 32
@@ -1294,7 +1372,7 @@ components:
     Conversation:
       type: object
       additionalProperties: false
-      required: [id, type, status, peer, unreadCount, updatedAt, createdAt]
+      required: [id, type, status, initiatedBy, lastMessageSequence, peer, unreadCount, updatedAt, createdAt]
       properties:
         id:
           type: string
@@ -1305,6 +1383,13 @@ components:
         status:
           type: string
           enum: [pending, accepted, declined]
+        initiatedBy:
+          type: string
+          format: uuid
+        lastMessageSequence:
+          type: integer
+          minimum: 0
+          description: Strictly monotonic per-conversation sequence number of the latest message.
         peer:
           $ref: "#/components/schemas/PublicProfile"
         lastMessage:
@@ -1346,6 +1431,9 @@ components:
           type: string
           format: date-time
         deliveredAt:
+          type: [string, "null"]
+          format: date-time
+        readAt:
           type: [string, "null"]
           format: date-time
     MessageSnippet:
@@ -1402,3 +1490,19 @@ components:
         expiresIn:
           type: integer
           example: 60
+    UserSettings:
+      type: object
+      additionalProperties: false
+      required: [readReceiptsEnabled]
+      properties:
+        readReceiptsEnabled:
+          type: boolean
+          description: Whether the user emits and receives read receipts.
+    UpdateUserSettingsRequest:
+      type: object
+      additionalProperties: false
+      required: [readReceiptsEnabled]
+      properties:
+        readReceiptsEnabled:
+          type: boolean
+          description: Toggle whether read receipts are enabled.

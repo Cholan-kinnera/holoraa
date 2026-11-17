@@ -16,6 +16,37 @@ type AuthEvent struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Block struct {
+	BlockerID string             `json:"blocker_id"`
+	BlockedID string             `json:"blocked_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Conversation struct {
+	ID                  string             `json:"id"`
+	Type                string             `json:"type"`
+	Status              string             `json:"status"`
+	UserAID             string             `json:"user_a_id"`
+	UserBID             string             `json:"user_b_id"`
+	InitiatedBy         string             `json:"initiated_by"`
+	LastMessageSequence int64              `json:"last_message_sequence"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ConversationMember struct {
+	ConversationID          string             `json:"conversation_id"`
+	UserID                  string             `json:"user_id"`
+	LastReadMessageID       *string            `json:"last_read_message_id"`
+	LastReadSequence        int64              `json:"last_read_sequence"`
+	LastReadAt              pgtype.Timestamptz `json:"last_read_at"`
+	ReceiptMessageID        *string            `json:"receipt_message_id"`
+	ReceiptSequence         int64              `json:"receipt_sequence"`
+	ReceiptAt               pgtype.Timestamptz `json:"receipt_at"`
+	ReceiptBaselineSequence int64              `json:"receipt_baseline_sequence"`
+	JoinedAt                pgtype.Timestamptz `json:"joined_at"`
+}
+
 type EmailIdentity struct {
 	Email      string             `json:"email"`
 	UserID     string             `json:"user_id"`
@@ -40,6 +71,36 @@ type Follow struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type Message struct {
+	ID              string             `json:"id"`
+	ConversationID  string             `json:"conversation_id"`
+	SenderID        string             `json:"sender_id"`
+	ClientMessageID string             `json:"client_message_id"`
+	Content         string             `json:"content"`
+	SequenceNum     int64              `json:"sequence_num"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	DeliveredAt     pgtype.Timestamptz `json:"delivered_at"`
+	ReadAt          pgtype.Timestamptz `json:"read_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type OutboxEvent struct {
+	ID             int64              `json:"id"`
+	EventType      string             `json:"event_type"`
+	ConversationID string             `json:"conversation_id"`
+	Payload        []byte             `json:"payload"`
+	TargetUserIds  []string           `json:"target_user_ids"`
+	Attempts       int16              `json:"attempts"`
+	Status         string             `json:"status"`
+	ClaimedBy      *string            `json:"claimed_by"`
+	ClaimToken     *string            `json:"claim_token"`
+	ClaimedAt      pgtype.Timestamptz `json:"claimed_at"`
+	LeaseExpiresAt pgtype.Timestamptz `json:"lease_expires_at"`
+	ErrorMessage   *string            `json:"error_message"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	PublishedAt    pgtype.Timestamptz `json:"published_at"`
+}
+
 type Session struct {
 	ID                string             `json:"id"`
 	UserID            string             `json:"user_id"`
@@ -59,4 +120,17 @@ type User struct {
 	AvatarUrl   *string            `json:"avatar_url"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserSetting struct {
+	UserID              string             `json:"user_id"`
+	ReadReceiptsEnabled bool               `json:"read_receipts_enabled"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WsTicket struct {
+	TicketHash []byte             `json:"ticket_hash"`
+	UserID     string             `json:"user_id"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }

@@ -15,27 +15,35 @@ erDiagram
         text status "pending | accepted | declined"
         uuid user_a_id FK
         uuid user_b_id FK
+        uuid initiated_by FK "must be user_a_id or user_b_id"
+        bigint last_message_sequence
         timestamptz created_at
         timestamptz updated_at
     }
 
     conversation_members {
         uuid conversation_id PK, FK
-        uuid user_id PK, FK
-        uuid last_read_message_id FK
-        timestamptz last_read_at
+        uuid user_id PK, FK "enforced by trigger: user_a_id or user_b_id"
+        uuid last_read_message_id FK "private read watermark"
+        bigint last_read_sequence "private read watermark"
+        timestamptz last_read_at "private read watermark"
+        uuid receipt_message_id FK "peer-visible receipt"
+        bigint receipt_sequence "peer-visible receipt"
+        timestamptz receipt_at "peer-visible receipt"
+        bigint receipt_baseline_sequence "peer-visible baseline"
         timestamptz joined_at
     }
 
     messages {
         uuid id PK
         uuid conversation_id FK
-        uuid sender_id FK
+        uuid sender_id FK "enforced by FK to conversation_members"
         uuid client_message_id UK
         text content
-        bigint sequence_num
+        bigint sequence_num "per-conversation"
         timestamptz created_at
         timestamptz delivered_at
+        timestamptz read_at "peer read timestamp"
         timestamptz deleted_at
     }
 
@@ -46,10 +54,20 @@ erDiagram
         jsonb payload
         uuid_array target_user_ids
         smallint attempts
-        text status "pending | processing | delivered | poison"
+        text status "pending | processing | published | poison"
+        text claimed_by
+        uuid claim_token
+        timestamptz claimed_at
+        timestamptz lease_expires_at
         text error_message
         timestamptz created_at
-        timestamptz delivered_at
+        timestamptz published_at
+    }
+
+    user_settings {
+        uuid user_id PK, FK
+        boolean read_receipts_enabled
+        timestamptz updated_at
     }
 
     blocks {
@@ -67,6 +85,8 @@ erDiagram
 
     users ||--o{ conversations : "participates_as_a"
     users ||--o{ conversations : "participates_as_b"
+    users ||--o{ conversations : "initiator"
+    users ||--o| user_settings : "preferences"
     conversations ||--|{ conversation_members : "has"
     users ||--o{ conversation_members : "member"
     conversations ||--o{ messages : "contains"

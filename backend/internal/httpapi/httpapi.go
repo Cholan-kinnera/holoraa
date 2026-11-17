@@ -9,11 +9,14 @@
 package httpapi
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"regexp"
 	"time"
@@ -22,8 +25,10 @@ import (
 
 	"github.com/Cholan-kinnera/holoraa/backend/internal/auth"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/messaging"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/problem"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/realtime"
 )
 
 // RequestIDHeader carries the request ID in and out of the API.
@@ -39,13 +44,19 @@ type ctxKey struct{}
 // Deps are the collaborators the router needs. Auth and Profiles are optional:
 // when Auth is nil, the sign-in and profile routes are not registered.
 type Deps struct {
-	Log           *slog.Logger
-	Health        *health.Handler
-	Auth          *auth.Service
-	Profiles      *profile.Repo
-	Security      Security
-	SearchLimiter *SearchLimiter
-	FollowLimiter *SlidingLimiter
+	Log              *slog.Logger
+	Health           *health.Handler
+	Auth             *auth.Service
+	Profiles         *profile.Repo
+	Messaging        *messaging.Service
+	Tickets          *realtime.TicketService
+	Hub              *realtime.Hub
+	Security         Security
+	SearchLimiter    *SearchLimiter
+	FollowLimiter    *SlidingLimiter
+	TicketLimiter    *SlidingLimiter
+	WSUpgradeLimiter *SlidingLimiter
+	MessageLimiter   *SlidingLimiter
 }
 
 // NewRouter returns the API handler.
@@ -55,6 +66,15 @@ func NewRouter(d Deps) http.Handler {
 	}
 	if d.FollowLimiter == nil {
 		d.FollowLimiter = NewSlidingLimiter(30, time.Minute)
+	}
+	if d.TicketLimiter == nil {
+		d.TicketLimiter = NewSlidingLimiter(10, time.Minute)
+	}
+	if d.WSUpgradeLimiter == nil {
+		d.WSUpgradeLimiter = NewSlidingLimiter(10, time.Minute)
+	}
+	if d.MessageLimiter == nil {
+		d.MessageLimiter = NewSlidingLimiter(30, time.Minute)
 	}
 	r := chi.NewRouter()
 	r.Use(securityHeaders)
@@ -76,6 +96,12 @@ func NewRouter(d Deps) http.Handler {
 		if d.Auth != nil && d.Profiles != nil {
 			d.registerAuthRoutes(v1)
 			d.registerProfileRoutes(v1)
+		}
+		if d.Messaging != nil {
+			d.registerMessagingRoutes(v1)
+		}
+		if d.Tickets != nil && d.Hub != nil {
+			d.registerRealtimeRoutes(v1)
 		}
 	})
 	return r
@@ -164,6 +190,20 @@ type statusRecorder struct {
 func (s *statusRecorder) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap exposes the underlying ResponseWriter to net/http.ResponseController (e.g. WebSocket hijacking).
+func (s *statusRecorder) Unwrap() http.ResponseWriter {
+	return s.ResponseWriter
+}
+
+// Hijack delegates connection hijacking to the underlying ResponseWriter when supported.
+func (s *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := s.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("response writer does not support hijacking")
+	}
+	return h.Hijack()
 }
 
 func accessLog(log *slog.Logger) func(http.Handler) http.Handler {

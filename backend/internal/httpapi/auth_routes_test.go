@@ -20,6 +20,7 @@ import (
 	"github.com/Cholan-kinnera/holoraa/backend/internal/auth"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/mail"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/messaging"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/testdb"
 )
@@ -75,11 +76,12 @@ func newAuthFixture(t *testing.T) authFixture {
 	sender := &memSender{}
 	svc := auth.New(pool, []byte(testSecret), sender, rand.Reader)
 	h := NewRouter(Deps{
-		Log:      log,
-		Health:   health.New(pool, time.Second, log),
-		Auth:     svc,
-		Profiles: profile.NewRepo(pool),
-		Security: Security{CookieName: testCookieName, CookieSecure: true, AllowedOrigins: []string{testOrigin}},
+		Log:       log,
+		Health:    health.New(pool, time.Second, log),
+		Auth:      svc,
+		Profiles:  profile.NewRepo(pool),
+		Messaging: messaging.NewService(pool),
+		Security:  Security{CookieName: testCookieName, CookieSecure: true, AllowedOrigins: []string{testOrigin}},
 	})
 	return authFixture{pool: pool, h: h, mail: sender, logs: &logs, auth: svc}
 }
