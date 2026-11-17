@@ -2,15 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Menu, Search, X } from '../ui/Icons';
+import { ArrowUpRight, Menu, X } from '../ui/Icons';
 import { BrandLogo, BrandMark } from '../ui/Brand';
 
-interface FloatingNavbarProps {
-  onOpenSearch: () => void;
-  onEnterApp: (tab?: string) => void;
-}
-
-export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps) {
+export function FloatingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -69,25 +64,14 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
         </div>
 
         <div className="navbar-actions-group">
-          <button
-            type="button"
-            onClick={onOpenSearch}
-            className="navbar-search-btn"
-            aria-label="Search people with command palette"
-          >
-            <Search size={14} />
-            <span className="navbar-search-label">Search</span>
-            <span className="navbar-search-kbd">⌘K</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onEnterApp('dms')}
+          <Link
+            href="/app"
             className="navbar-cta-btn"
           >
             <span className="navbar-cta-text-full">Launch App</span>
             <span className="navbar-cta-text-short">Open</span>
             <ArrowUpRight size={14} />
-          </button>
+          </Link>
 
           {/* Mobile hamburger toggle */}
           <button
@@ -155,6 +139,13 @@ export function FloatingNavbar({ onOpenSearch, onEnterApp }: FloatingNavbarProps
               onClick={() => setMobileMenuOpen(false)}
             >
               Sign In
+            </Link>
+            <Link
+              href="/app"
+              className="navbar-mobile-link font-medium text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Launch App →
             </Link>
           </div>
         </div>

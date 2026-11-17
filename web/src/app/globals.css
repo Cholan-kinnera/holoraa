@@ -1952,6 +1952,14 @@ textarea::placeholder {
     margin-right: var(--space-2);
   }
 
+  .menu__name {
+    display: none;
+  }
+
+  .menu__toggle {
+    padding: 0.25rem;
+  }
+
   .composer {
     padding: var(--space-3) var(--space-4);
   }

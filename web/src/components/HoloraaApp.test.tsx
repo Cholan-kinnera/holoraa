@@ -33,37 +33,24 @@ describe('HoloraaApp Component', () => {
     expect(container.textContent).toContain('Launch Web App');
   });
 
-  it('transitions to 4-column workspace when Launch Web App button is clicked', () => {
-    const launchButton = Array.from(container.querySelectorAll('button')).find((btn) =>
-      btn.textContent?.includes('Launch Web App')
+  it('links to /app from hero launch button without entering mock workspace', () => {
+    const launchButton = Array.from(container.querySelectorAll('a')).find((el) =>
+      el.textContent?.includes('Launch Web App')
     );
     expect(launchButton).toBeDefined();
+    expect(launchButton?.getAttribute('href')).toBe('/app');
 
-    act(() => {
-      launchButton?.click();
-    });
-
-    // In workspace view: IconRail, Messages, and RightOrbitRail are visible
-    expect(container.textContent).toContain('Messages');
-    expect(container.textContent).toContain('People in your orbit');
+    // Verify mock workspace elements are never in the DOM
+    expect(container.querySelector('[title*="Search People & Thoughts"]')).toBeNull();
+    expect(container.textContent).not.toContain('People in your orbit');
   });
 
-  it('switches between workspace tabs cleanly', () => {
-    const launchButton = Array.from(container.querySelectorAll('button')).find((btn) =>
-      btn.textContent?.includes('Launch Web App')
-    );
-    act(() => {
-      launchButton?.click();
-    });
-
-    // Find tab buttons in IconRail
-    const spotBtn = container.querySelector('button[title*="The Spot"]');
-    expect(spotBtn).toBeDefined();
-
-    act(() => {
-      (spotBtn as HTMLButtonElement)?.click();
-    });
-
-    expect(container.textContent).toContain('The Spot');
+  it('contains external showcase navigation links and sections', () => {
+    expect(container.querySelector('#section-chat')).toBeDefined();
+    expect(container.querySelector('#section-spot')).toBeDefined();
+    expect(container.querySelector('#section-spaces')).toBeDefined();
+    expect(container.querySelector('#section-room')).toBeDefined();
+    expect(container.querySelector('#principles')).toBeDefined();
+    expect(container.querySelector('#holories')).toBeDefined();
   });
 });
