@@ -153,6 +153,30 @@ export interface paths {
         patch: operations["updateMyProfile"];
         trace?: never;
     };
+    "/v1/me/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user settings
+         * @description Returns the user's persistent privacy preferences, including read receipts.
+         */
+        get: operations["getMySettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update user settings
+         * @description Updates the user's persistent privacy preferences.
+         */
+        patch: operations["updateMySettings"];
+        trace?: never;
+    };
     "/v1/users": {
         parameters: {
             query?: never;
@@ -250,7 +274,7 @@ export interface paths {
         };
         /**
          * List user conversations
-         * @description Returns all active 1:1 direct conversations and message requests for the authenticated caller.
+         * @description Returns all canonical 1:1 direct conversations (pending, accepted, and declined) for the authenticated caller.
          */
         get: operations["listConversations"];
         put?: never;
@@ -272,9 +296,29 @@ export interface paths {
         put?: never;
         /**
          * Get or create direct conversation
-         * @description Idempotently creates or retrieves the canonical 1:1 conversation with target user.
+         * @description Idempotently creates or retrieves the canonical 1:1 conversation with target user. Returns 403 Forbidden if a block exists or if the canonical conversation was previously declined (terminal in MVP; mutual follows do not override declined).
          */
         post: operations["getOrCreateDirectConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get conversation
+         * @description Returns a canonical 1:1 direct conversation (including declined status) for a participating member.
+         */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -394,7 +438,7 @@ export interface paths {
         };
         /**
          * WebSocket upgrade
-         * @description Upgrades HTTP connection to bidirectional WebSocket protocol using single-use ticket.
+         * @description Upgrades HTTP connection to bidirectional WebSocket protocol using a single-use ticket carried in Sec-WebSocket-Protocol ("holoraa, holoraa-ticket.<ticket>"). Query-string credentials and session cookies are rejected.
          */
         get: operations["upgradeWebSocket"];
         put?: never;
@@ -683,6 +727,10 @@ export interface components {
             type: "direct";
             /** @enum {string} */
             status: "pending" | "accepted" | "declined";
+            /** Format: uuid */
+            initiatedBy: string;
+            /** @description Strictly monotonic per-conversation sequence number of the latest message. */
+            lastMessageSequence: number;
             peer: components["schemas"]["PublicProfile"];
             lastMessage?: components["schemas"]["MessageSnippet"];
             unreadCount: number;
@@ -706,6 +754,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             deliveredAt?: string | null;
+            /** Format: date-time */
+            readAt?: string | null;
         };
         MessageSnippet: {
             /** Format: uuid */
@@ -732,6 +782,14 @@ export interface components {
             ticket: string;
             /** @example 60 */
             expiresIn: number;
+        };
+        UserSettings: {
+            /** @description Whether the user emits and receives read receipts. */
+            readReceiptsEnabled: boolean;
+        };
+        UpdateUserSettingsRequest: {
+            /** @description Toggle whether read receipts are enabled. */
+            readReceiptsEnabled: boolean;
         };
     };
     responses: {
@@ -998,6 +1056,55 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getMySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateMySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Settings updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
     searchUsers: {
         parameters: {
             query?: {
@@ -1210,7 +1317,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Existing canonical conversation returned. */
+            /** @description Existing canonical conversation (pending or accepted) returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1233,6 +1340,33 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             default: components["responses"]["Problem"];
         };
     };
@@ -1317,6 +1451,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
@@ -1410,10 +1545,11 @@ export interface operations {
     };
     upgradeWebSocket: {
         parameters: {
-            query: {
-                ticket: string;
+            query?: never;
+            header: {
+                /** @description Subprotocol list offering "holoraa" and "holoraa-ticket.<ticket>". Server responds with "holoraa" only. */
+                "Sec-WebSocket-Protocol": string;
             };
-            header?: never;
             path?: never;
             cookie?: never;
         };

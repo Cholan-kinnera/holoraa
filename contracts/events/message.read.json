@@ -26,7 +26,7 @@
     "payload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["conversationId", "userId", "messageId", "readAt"],
+      "required": ["conversationId", "userId", "messageId", "sequenceNum", "readAt"],
       "properties": {
         "conversationId": {
           "type": "string",
@@ -41,6 +41,16 @@
           "type": "string",
           "format": "uuid",
           "description": "Highest read message ID."
+        },
+        "sequenceNum": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Highest peer-visible sequence number disclosed."
+        },
+        "fromSequenceNum": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Inclusive start sequence number of messages disclosed by this receipt."
         },
         "readAt": {
           "type": "string",

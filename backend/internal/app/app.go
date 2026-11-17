@@ -16,7 +16,9 @@ import (
 	"github.com/Cholan-kinnera/holoraa/backend/internal/health"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/httpapi"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/mail"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/messaging"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/profile"
+	"github.com/Cholan-kinnera/holoraa/backend/internal/realtime"
 	"github.com/Cholan-kinnera/holoraa/backend/internal/store"
 )
 
@@ -51,13 +53,30 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return err
 	}
 
+	msgSvc := messaging.NewService(pool)
+	tickets := realtime.NewTicketService(pool)
+	hub := realtime.NewHub(pool, msgSvc, log, realtime.HubConfig{})
+	relay := realtime.NewOutboxRelay(pool, hub, tickets, log, realtime.RelayConfig{})
+	hub.SetRelayNotifier(relay)
+	msgSvc.SetRealtimeHooks(relay, hub)
+
+	relayCtx, relayCancel := context.WithCancel(ctx)
+	relayDone := make(chan struct{})
+	go func() {
+		defer close(relayDone)
+		relay.Run(relayCtx)
+	}()
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			Log:      log,
-			Health:   health.New(pool, readinessTimeout, log),
-			Auth:     auth.New(pool, cfg.AuthSecret, sender, rand.Reader),
-			Profiles: profile.NewRepo(pool),
+			Log:       log,
+			Health:    health.New(pool, readinessTimeout, log),
+			Auth:      auth.New(pool, cfg.AuthSecret, sender, rand.Reader),
+			Profiles:  profile.NewRepo(pool),
+			Messaging: msgSvc,
+			Tickets:   tickets,
+			Hub:       hub,
 			Security: httpapi.Security{
 				CookieName:     cfg.CookieName,
 				CookieSecure:   cfg.CookieSecure,
@@ -80,6 +99,9 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 
 	select {
 	case err := <-serveErr:
+		relayCancel()
+		hub.Close()
+		<-relayDone
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
@@ -87,6 +109,10 @@ func Serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	case <-ctx.Done():
 		log.Info("shutting down")
 	}
+
+	relayCancel()
+	hub.Close()
+	<-relayDone
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()

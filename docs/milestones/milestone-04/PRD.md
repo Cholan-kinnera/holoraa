@@ -37,19 +37,24 @@ Modern messaging platforms suffer from either:
 ## 3. Scope Boundaries
 
 ### 3.1 In-Scope (Milestone 4 Deliverables)
-1. **Canonical 1:1 Direct Conversations:** Deterministic pairing between two authenticated users (`user_a_id < user_b_id`) with conversation state handling (`pending` message requests and `accepted` active chats).
-2. **Message Request Policy:**
-   - Following does not automatically permit unrestricted messaging.
-   - Initial messages from non-mutual or unknown connections create a message request (`pending` state).
-   - Recipient can Accept or Decline/Block. Accepting moves the conversation to `accepted`.
+1. **Canonical 1:1 Direct Conversations:** Deterministic pairing between two authenticated users (`user_a_id < user_b_id`) with conversation state handling (`pending` message requests, `accepted` active chats, and terminal `declined` requests).
+2. **Conversation Initiation & Message Request Policy:**
+   - **Mutual Follow Initiation:** Mutual followers automatically receive an `accepted` conversation on first initiation.
+   - **Non-Mutual Pending Requests:** Non-mutual users initiate conversations as `pending` message requests.
+   - **Strict Permission Boundaries:** Following alone does not grant unrestricted messaging permission.
+   - **Pending Send Limit:** Senders cannot send additional messages while a request remains in `pending` status (strict limit of 1 message).
+   - **Recipient Rights:** The recipient can explicitly Accept or Decline/Block.
+   - **Blocking Override:** Active blocking overrides mutual-follow eligibility.
+   - **Terminal Declined State (MVP):** A `declined` canonical conversation is terminal for both participants in the MVP. Mutual follows never override a `declined` state, neither participant can silently reopen, accept, or send messages in that conversation, `POST /v1/conversations/direct` returns `403 Forbidden` when the canonical conversation is `declined`, and `GET /v1/conversations` and `GET /v1/conversations/{id}` continue exposing the `declined` status to both participants. Any future re-request capability requires a separately designed explicit lifecycle.
 3. **Real-Time WebSockets:** Single-instance Go WebSocket engine using `github.com/coder/websocket`, single-use ticket authentication, origin validation, and 30-second ping/pong heartbeats.
 4. **Message Persistence:** UTF-8 text messages (1–4,000 characters) committed to PostgreSQL with monotonic sequence numbers and keyset cursor pagination.
 5. **Client Idempotency:** Client-generated `client_message_id` (UUIDv4) preventing duplicate database rows on network retries.
 6. **Transactional Outbox Engine:** Guaranteed at-least-once message dispatch from PostgreSQL to the WebSocket broadcast hub with worker crash recovery, exponential retry backoff, and poison-event isolation.
-7. **Explicit Delivery & Read Semantics:**
+7. **Explicit Delivery & Read Semantics with Persistent Privacy:**
    - **Sent:** Transaction committed to PostgreSQL.
    - **Delivered:** Recipient client application explicitly sends `message.delivered` ACK back to the server over WebSocket or REST.
    - **Read:** Recipient satisfies visibility criteria (focused window, active tab, message visible in viewport for ≥ 500ms) and advances a monotonic read watermark (`message.read`).
+   - **Persistent Read Receipt Privacy:** Read receipts are enabled by default, but users can disable them via a real persistent setting (`user_settings.read_receipts_enabled`). When disabled, the client suppresses read events, the server suppresses outbox publication to the sender, and the sender observes `delivered` status but never `read`. Re-enabling receipts never retroactively discloses past reads.
 8. **Bidirectional User Blocking:** Complete server-side enforcement across REST, WebSocket subscriptions, message delivery, and presence.
 9. **Single-Instance Deployment Specification:** Explicit operational constraints ensuring M4 runs strictly as a single-instance backend until a distributed event broker is introduced in M7.
 10. **Frontend Workspace Integration:** Integration with `ContextDrawer` (conversation list) and `MainStage` (chat thread, optimistic send bubbles, retry actions, connection status, and unread counts).
@@ -107,7 +112,7 @@ Modern messaging platforms suffer from either:
 | ID | Capability | Specification |
 |---|---|---|
 | **FR-01** | **Canonical Direct Pairing** | Exactly one conversation can exist between two users, enforced via `CHECK (user_a_id < user_b_id)` and `UNIQUE (user_a_id, user_b_id)`. |
-| **FR-02** | **Message Request Policy** | Direct conversations have states `pending` and `accepted`. First-time conversations from non-mutual contacts require recipient acceptance before continuous messaging is permitted. |
+| **FR-02** | **Message Request Policy** | Direct conversations have states `pending`, `accepted`, and `declined`. Non-mutual requests require recipient acceptance before continuous messaging. `declined` is terminal for both participants in the MVP (`POST /v1/conversations/direct` returns `403 Forbidden`; `GET /v1/conversations` and `GET /v1/conversations/{id}` expose `declined`). |
 | **FR-03** | **Message Validation** | Messages accept UTF-8 text from 1 to 4,000 characters. Control characters (except newlines `\n` and tabs `\t`) and null bytes are sanitized. |
 | **FR-04** | **Idempotent Ingestion** | Every send requires a UUIDv4 `client_message_id`. Submitting the same ID within the conversation returns the existing record without inserting duplicate rows. |
 | **FR-05** | **Transactional Outbox** | Messages and outbox events must commit in the same database transaction. The outbox dispatcher provides at-least-once event delivery with worker crash recovery. |

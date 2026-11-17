@@ -1,19 +1,17 @@
 'use client';
 
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { CheckCheck } from '../ui/Icons';
 import { Avatar } from '../ui/Avatar';
 import { FollowButton } from '../ui/FollowButton';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
-
-interface StoryBentoGridProps {
-  onEnterApp: (tab: string) => void;
-}
-
-export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
+export function StoryBentoGrid() {
   const containerRef = useRef<HTMLElement>(null);
+  const [followingMeera, setFollowingMeera] = useState(false);
+  const [knockStatus, setKnockStatus] = useState<'knocking' | 'admitted' | 'dismissed'>('knocking');
 
   useLayoutEffect(() => {
     const root = containerRef.current;
@@ -122,8 +120,8 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                 </div>
               </div>
               <FollowButton
-                isFollowing={false}
-                onToggle={() => onEnterApp('spot')}
+                isFollowing={followingMeera}
+                onToggle={() => setFollowingMeera((prev) => !prev)}
                 size="sm"
               />
             </div>
@@ -135,14 +133,13 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                 <span className="text-accent-coral">❤️ 24</span>
                 <span>💬 6 replies</span>
               </div>
-              <button
-                type="button"
-                onClick={() => onEnterApp('spot')}
+              <Link
+                href="/app"
                 className="btn-reply-dm"
               >
                 <span>Reply in DM</span>
                 <span className="text-accent-coral">→</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -222,13 +219,12 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
                   size="md"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => onEnterApp('spaces')}
-                className="w-full py-2 rounded-xl bg-oled-elevated hover:bg-neutral-800 text-xs text-white font-medium transition-colors"
+              <Link
+                href="/app"
+                className="w-full py-2 rounded-xl bg-oled-elevated hover:bg-neutral-800 text-xs text-white font-medium transition-colors text-center block"
               >
                 Drop into voice
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -251,20 +247,32 @@ export function StoryBentoGrid({ onEnterApp }: StoryBentoGridProps) {
               </div>
             </div>
             <div className="room-knock-actions">
-              <button
-                type="button"
-                onClick={() => onEnterApp('room')}
-                className="btn-let-in"
-              >
-                Let in
-              </button>
-              <button
-                type="button"
-                onClick={() => onEnterApp('room')}
-                className="btn-dismiss-knock"
-              >
-                Dismiss
-              </button>
+              {knockStatus === 'admitted' ? (
+                <span className="text-xs text-accent-green font-medium py-1 px-3 rounded-full bg-accent-green/10">
+                  Admitted to room
+                </span>
+              ) : knockStatus === 'dismissed' ? (
+                <span className="text-xs text-ink-muted py-1 px-3 rounded-full bg-oled-elevated">
+                  Dismissed
+                </span>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setKnockStatus('admitted')}
+                    className="btn-let-in"
+                  >
+                    Let in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKnockStatus('dismissed')}
+                    className="btn-dismiss-knock"
+                  >
+                    Dismiss
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

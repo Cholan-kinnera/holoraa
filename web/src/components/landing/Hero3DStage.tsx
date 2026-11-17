@@ -7,11 +7,7 @@ import { Avatar } from '../ui/Avatar';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
-interface Hero3DStageProps {
-  onEnterApp: (tab?: string) => void;
-}
-
-export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
+export function Hero3DStage() {
   const containerRef = useRef<HTMLElement>(null);
   const [previewTab, setPreviewTab] = useState<'spot' | 'chat'>('spot');
 
@@ -82,28 +78,26 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
       </p>
 
       <div className="hero-actions">
-        <button
-          type="button"
-          onClick={() => onEnterApp('dms')}
+        <Link
+          href="/app"
           className="btn-primary-launch"
         >
           <span>Launch Web App</span>
           <ArrowRight size={16} />
-        </button>
+        </Link>
         <Link
           href="/sign-in"
           className="btn-glass-action"
         >
           <span>Sign In</span>
         </Link>
-        <button
-          type="button"
-          onClick={() => onEnterApp('spot')}
+        <a
+          href="#section-spot"
           className="btn-glass-action"
         >
           <Sparkles size={16} className="text-accent-coral" />
           <span>The Spot</span>
-        </button>
+        </a>
       </div>
 
       {/* 3D App Preview Frame */}
@@ -123,14 +117,13 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                 <span className="w-1.5 h-1.5 rounded-full bg-accent-green" /> 4 friends active
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => onEnterApp('spot')}
+            <Link
+              href="/app"
               className="btn-window-action"
             >
-              <span>Open full screen</span>
+              <span>Launch App</span>
               <span className="text-accent-coral">→</span>
-            </button>
+            </Link>
           </div>
 
           <p className="sr-only">
@@ -148,10 +141,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                 </div>
                 {/* Mini Notes Row */}
                 <div className="grid grid-cols-3 gap-2 py-2 mb-3 border-b hairline-border pb-3 text-center">
-                  <div
-                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                    onClick={() => onEnterApp('dms')}
-                  >
+                  <div className="flex flex-col items-center gap-1.5 group">
                     <Avatar
                       src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
                       alt="Aanya"
@@ -163,10 +153,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     </span>
                   </div>
 
-                  <div
-                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                    onClick={() => onEnterApp('room')}
-                  >
+                  <div className="flex flex-col items-center gap-1.5 group">
                     <Avatar
                       src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
                       alt="Rohan"
@@ -178,10 +165,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     </span>
                   </div>
 
-                  <div
-                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                    onClick={() => onEnterApp('spot')}
-                  >
+                  <div className="flex flex-col items-center gap-1.5 group">
                     <Avatar
                       src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&auto=format&fit=crop&q=80"
                       alt="Meera"
@@ -195,10 +179,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
 
                 {/* Mini Active Rows */}
                 <div className="space-y-1.5">
-                  <div
-                    onClick={() => onEnterApp('dms')}
-                    className="p-2.5 rounded-2xl bg-oled-elevated cursor-pointer flex items-center gap-3"
-                  >
+                  <div className="p-2.5 rounded-2xl bg-oled-elevated flex items-center gap-3">
                     <Avatar
                       src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
                       alt="Aanya Sharma"
@@ -212,10 +193,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                       <p className="text-xs text-ink-secondary truncate">Grabbed our corner table ☕</p>
                     </div>
                   </div>
-                  <div
-                    onClick={() => onEnterApp('dms')}
-                    className="p-2.5 rounded-2xl hover:bg-oled-surface cursor-pointer flex items-center gap-3 transition-colors"
-                  >
+                  <div className="p-2.5 rounded-2xl bg-oled-surface flex items-center gap-3 transition-colors">
                     <Avatar
                       src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=120&auto=format&fit=crop&q=80"
                       alt="Weekend Goa Plan"
@@ -235,10 +213,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
               </div>
 
               {/* Mini Voice Bar */}
-              <div
-                onClick={() => onEnterApp('room')}
-                className="p-2.5 rounded-2xl bg-oled-surface hairline-border flex items-center justify-between cursor-pointer hover:bg-oled-elevated transition-colors"
-              >
+              <div className="p-2.5 rounded-2xl bg-oled-surface hairline-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-accent-green animate-ping" />
                   <span className="text-xs text-white font-medium">holoraa.app/arjun</span>
@@ -300,14 +275,13 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                     </p>
                     <div className="pl-10 flex items-center gap-4 text-xs">
                       <span className="text-accent-coral flex items-center gap-1 font-mono text-[11px]">❤️ 18</span>
-                      <button
-                        type="button"
-                        onClick={() => onEnterApp('spot')}
+                      <Link
+                        href="/app"
                         className="btn-reply-dm"
                       >
                         <span>Reply in DM</span>
                         <span className="text-accent-coral">→</span>
-                      </button>
+                      </Link>
                     </div>
                   </div>
 
@@ -362,8 +336,8 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                 </div>
               )}
 
-              <div
-                onClick={() => onEnterApp('spot')}
+              <Link
+                href="/app"
                 className="hero-mini-composer"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -375,7 +349,7 @@ export function Hero3DStage({ onEnterApp }: Hero3DStageProps) {
                   <span className="text-xs text-ink-muted truncate">Drop a thought or status note...</span>
                 </div>
                 <span className="text-xs font-medium text-accent-coral shrink-0 pr-1">Post →</span>
-              </div>
+              </Link>
             </div>
           </div>
         </div>

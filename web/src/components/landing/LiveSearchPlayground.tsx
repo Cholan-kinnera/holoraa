@@ -12,13 +12,11 @@ import { FollowButton } from '../ui/FollowButton';
 import { gsap } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
-
 interface LiveSearchPlaygroundProps {
   peopleDirectory: Record<string, DirectoryUser>;
   socialGraph: Record<string, Set<string>>;
   currentUserId: string;
   onToggleFollow: (targetId: string) => void;
-  onSelectUser: (userId: string) => void;
 }
 
 export function LiveSearchPlayground({
@@ -26,7 +24,6 @@ export function LiveSearchPlayground({
   socialGraph,
   currentUserId,
   onToggleFollow,
-  onSelectUser,
 }: LiveSearchPlaygroundProps) {
   const containerRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
@@ -126,7 +123,6 @@ export function LiveSearchPlayground({
           <span className="search-latency-badge">
             {results.length} results ({latencyMs}ms)
           </span>
-
         </div>
 
         {/* Results Grid */}
@@ -144,7 +140,6 @@ export function LiveSearchPlayground({
             return (
               <div
                 key={user.id}
-                onClick={() => onSelectUser(user.id)}
                 className="search-result-card"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
