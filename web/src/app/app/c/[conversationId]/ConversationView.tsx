@@ -9,6 +9,8 @@ export interface ConversationViewProps {
   conversationId: string;
   initialConversation: Conversation;
   initialMessages: Message[];
+  /** The server's `hasMore` for the initial page. */
+  initialHasMore: boolean;
 }
 
 /**
@@ -20,6 +22,7 @@ export function ConversationView({
   conversationId,
   initialConversation,
   initialMessages,
+  initialHasMore,
 }: ConversationViewProps) {
   const {
     selectConversation,
@@ -45,7 +48,7 @@ export function ConversationView({
         hydrateConversationMessages(
           conversationId,
           initialMessages,
-          initialMessages.length >= 50,
+          initialHasMore,
           initialMessages[initialMessages.length - 1]?.id,
         );
       } else {
@@ -65,6 +68,7 @@ export function ConversationView({
     loadConversationMessages,
     markAsRead,
     initialMessages,
+    initialHasMore,
   ]);
 
   const conversation = activeConversation ?? initialConversation;

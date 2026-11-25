@@ -327,13 +327,23 @@ export function MessagingProvider({
     [],
   );
 
-  // 4. Load older messages (pagination scroll-up)
+  // 4. Load older messages (pagination scroll-up). stateRef lags one render behind
+  // dispatch, so a ref guards against two fetches started in the same tick.
+  const olderInFlightRef = useRef(new Set<string>());
   const loadOlderMessages = useCallback(async (conversationId: string) => {
     const pag = stateRef.current.pagination[conversationId];
-    if (!pag || !pag.hasMoreOlder || pag.loadingOlder || !pag.oldestCursor) {
+    if (
+      !pag ||
+      !pag.hasMoreOlder ||
+      pag.loadingOlder ||
+      !pag.oldestCursor ||
+      olderInFlightRef.current.has(conversationId)
+    ) {
       return;
     }
 
+    olderInFlightRef.current.add(conversationId);
+    dispatch({ type: "OLDER_MESSAGES_LOADING", conversationId });
     try {
       const res = await getMessagesAction(conversationId, {
         limit: 50,
@@ -353,9 +363,17 @@ export function MessagingProvider({
           hasMoreOlder: res.hasMore,
           oldestCursor: newOldest,
         });
+      } else {
+        dispatch({ type: "OLDER_MESSAGES_ERROR", conversationId, error: res.message });
       }
     } catch {
-      // Non-fatal pagination error
+      dispatch({
+        type: "OLDER_MESSAGES_ERROR",
+        conversationId,
+        error: "Could not load older messages.",
+      });
+    } finally {
+      olderInFlightRef.current.delete(conversationId);
     }
   }, []);
 

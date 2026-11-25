@@ -55,12 +55,14 @@ export default async function ConversationDetailPage({
   // Fetch initial message history
   const msgRes = await getMessagesAction(conversationId, { limit: 50 });
   const initialMessages = msgRes.ok ? msgRes.messages : [];
+  const initialHasMore = msgRes.ok ? msgRes.hasMore : false;
 
   return (
     <ConversationView
       conversationId={conversationId}
       initialConversation={convRes.conversation}
       initialMessages={initialMessages}
+      initialHasMore={initialHasMore}
     />
   );
 }
