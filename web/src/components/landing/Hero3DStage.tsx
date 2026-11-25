@@ -100,8 +100,8 @@ export function Hero3DStage() {
         </a>
       </div>
 
-      {/* 3D App Preview Frame */}
-      <div className="hero-preview-container perspective-1400">
+      {/* App Preview Frame */}
+      <div className="hero-preview-container">
         <div id="hero-preview-frame" className="hero-preview-window">
           {/* Mock Window Header */}
           <div className="hero-window-header">

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { readApiBaseUrl } from "@/lib/api/client";
-import { currentCookieHeader, getSession, requestContext } from "@/lib/auth/server";
+import { currentCookieHeader, getSession, readOnlyContext, requestContext } from "@/lib/auth/server";
 import { validateUsername } from "@/lib/auth/validation";
 import {
   acceptMessageRequest,
@@ -31,21 +31,18 @@ import {
   validateUuid,
 } from "@/lib/messaging/validation";
 
-/** Derives the WebSocket URL securely from the server environment. */
-function resolveWsUrl(apiBaseUrl: string): string {
+/** Derives the WebSocket URL securely from the server environment. Defaults to relative /v1/realtime/ws for same-origin proxy. */
+function resolveWsUrl(): string {
   const explicitWs = process.env.HOLORAA_WS_URL?.trim();
   if (explicitWs) {
     return explicitWs;
   }
-  const url = new URL(apiBaseUrl);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = "/v1/realtime/ws";
-  return url.toString();
+  return "/v1/realtime/ws";
 }
 
 /** 1. Lists all direct conversations for the signed-in user. */
 export async function getConversationsAction(): Promise<FlowResult<{ conversations: Conversation[] }>> {
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }
@@ -95,7 +92,7 @@ export async function getConversationAction(
     return { ok: false, message: uuidError };
   }
 
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }
@@ -191,7 +188,7 @@ export async function getMessagesAction(
     return { ok: false, message: limitError };
   }
 
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }
@@ -409,13 +406,13 @@ export async function issueRealtimeTicketAction(): Promise<
     ok: true,
     ticket: res.ticket,
     expiresIn: res.expiresIn,
-    wsUrl: resolveWsUrl(baseUrl),
+    wsUrl: resolveWsUrl(),
   };
 }
 
 /** 13. Retrieves user settings (e.g. read receipts). */
 export async function getMySettingsAction(): Promise<FlowResult<{ settings: UserSettings }>> {
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }

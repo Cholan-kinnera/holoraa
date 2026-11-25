@@ -30,6 +30,27 @@ export function generateUuid(): string {
   });
 }
 
+/** Resolves an absolute or relative WebSocket URL to a valid ws:// or wss:// URL based on page origin. */
+export function resolveWebSocketUrl(
+  wsUrl?: string | null,
+  location?: { protocol: string; host: string } | null,
+): string {
+  const loc = location !== undefined ? location : (typeof window !== "undefined" ? window.location : null);
+  const protocol = loc?.protocol === "https:" ? "wss:" : "ws:";
+  const defaultBase = loc?.host ? `${protocol}//${loc.host}` : "ws://127.0.0.1:8080";
+
+  if (!wsUrl || wsUrl.trim().length === 0) {
+    return `${defaultBase}/v1/realtime/ws`;
+  }
+
+  const trimmed = wsUrl.trim();
+  if (trimmed.startsWith("/")) {
+    return `${defaultBase}${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 /** Calculates exponential backoff with full jitter: random(0, min(maxMs, baseMs * 2^attempt)) */
 export function calculateBackoffWithJitter(
   attempt: number,
@@ -455,15 +476,7 @@ export function useRealtimeSocket(options: UseRealtimeSocketOptions = {}): UseRe
     const { ticket, wsUrl } = ticketResult;
 
     // 2. Resolve WebSocket endpoint URL
-    let resolvedUrl: string;
-    if (wsUrl) {
-      resolvedUrl = wsUrl;
-    } else if (typeof window !== "undefined") {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      resolvedUrl = `${protocol}//${window.location.host}/v1/realtime/ws`;
-    } else {
-      resolvedUrl = "ws://127.0.0.1:8080/v1/realtime/ws";
-    }
+    const resolvedUrl = resolveWebSocketUrl(wsUrl);
 
     // 3. Subprotocols: negotiate base 'holoraa' while carrying ticket token in 'holoraa-ticket.<token>'
     const subprotocols = [

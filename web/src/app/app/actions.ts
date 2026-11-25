@@ -14,7 +14,7 @@ import {
   type PublicProfile,
   type UserSummary,
 } from "@/lib/auth/flows";
-import { applyCookies, clearSessionCookies, currentCookieHeader, requestContext } from "@/lib/auth/server";
+import { applyCookies, clearSessionCookies, currentCookieHeader, readOnlyContext, requestContext } from "@/lib/auth/server";
 import {
   validateAvatarUrl,
   validateBio,
@@ -103,7 +103,7 @@ export async function searchUsersAction(
   query: string,
   limit = 10,
 ): Promise<FlowResult<{ users: UserSummary[] }>> {
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }
@@ -118,7 +118,7 @@ export async function searchUsersAction(
 export async function getPublicProfileAction(
   username: string,
 ): Promise<FlowResult<{ profile: PublicProfile }>> {
-  const context = await requestContext();
+  const context = await readOnlyContext();
   if (!context.ok) {
     return { ok: false, message: context.message };
   }

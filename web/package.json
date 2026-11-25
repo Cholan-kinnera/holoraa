@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Holoraa web app (status page)",
   "scripts": {
-    "test": "vitest run",
-    "dev": "next dev -H 127.0.0.1",
+    "test": "vitest run --no-file-parallelism",
+    "dev": "node server.mjs",
     "build": "next build",
-    "start": "next start -H 127.0.0.1",
+    "start": "NODE_ENV=production node server.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "gen:api": "openapi-typescript ../contracts/openapi.yaml -o src/lib/api/schema.ts",

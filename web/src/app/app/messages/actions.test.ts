@@ -136,8 +136,21 @@ describe("Messaging Server Actions", () => {
       }
     });
 
-    it("rejects when requestContext fails", async () => {
+    it("rejects mutating actions when requestContext fails", async () => {
       vi.spyOn(authServer, "requestContext").mockResolvedValue({
+        ok: false,
+        message: "Sign-in is not configured on this server.",
+      });
+
+      const res = await acceptMessageRequestAction("123e4567-e89b-12d3-a456-426614174000");
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.message).toBe("Sign-in is not configured on this server.");
+      }
+    });
+
+    it("rejects read-only actions when readOnlyContext fails", async () => {
+      vi.spyOn(authServer, "readOnlyContext").mockResolvedValue({
         ok: false,
         message: "Sign-in is not configured on this server.",
       });
@@ -149,11 +162,10 @@ describe("Messaging Server Actions", () => {
       }
     });
 
-    it("getMySettingsAction forwards cookieHeader and returns settings", async () => {
-      vi.spyOn(authServer, "requestContext").mockResolvedValue({
+    it("getMySettingsAction forwards cookieHeader and returns settings using readOnlyContext", async () => {
+      vi.spyOn(authServer, "readOnlyContext").mockResolvedValue({
         ok: true,
         client: {} as unknown as ApiClient,
-        origin: "http://localhost:3000",
       });
       vi.spyOn(authServer, "currentCookieHeader").mockResolvedValue("sess=123");
       vi.spyOn(flows, "getMySettings").mockResolvedValue({
@@ -170,7 +182,7 @@ describe("Messaging Server Actions", () => {
   });
 
   describe("Realtime ticket derivation & action routing", () => {
-    it("issueRealtimeTicketAction derives ws:// URL correctly from API base URL", async () => {
+    it("issueRealtimeTicketAction derives relative WebSocket URL for same-origin proxy", async () => {
       vi.spyOn(authServer, "requestContext").mockResolvedValue({
         ok: true,
         client: {} as unknown as ApiClient,
@@ -193,7 +205,7 @@ describe("Messaging Server Actions", () => {
       if (res.ok) {
         expect(res.ticket).toBe("valid-ticket-token");
         expect(res.expiresIn).toBe(60);
-        expect(res.wsUrl).toBe("ws://127.0.0.1:8080/v1/realtime/ws");
+        expect(res.wsUrl).toBe("/v1/realtime/ws");
       }
     });
 

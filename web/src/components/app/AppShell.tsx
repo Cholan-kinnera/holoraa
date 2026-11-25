@@ -10,6 +10,7 @@ import type { User, UserSummary } from "@/lib/auth/flows";
 
 import { ProfileMenu } from "./ProfileMenu";
 import { ShellFrame } from "./ShellFrame";
+import { MessagingProvider } from "@/lib/messaging/MessagingProvider";
 
 /**
  * The signed-in application shell. Shows conversations in the sidebar and
@@ -32,7 +33,7 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
   }, []);
 
   return (
-    <>
+    <MessagingProvider user={user}>
       <ShellFrame
         sidebar={
           <>
@@ -74,6 +75,6 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
         onClose={() => setSelectedUser(null)}
         isCurrentUser={selectedUser?.username === user.username}
       />
-    </>
+    </MessagingProvider>
   );
 }

@@ -11,16 +11,50 @@ import { loadSession, MESSAGES, type SessionState } from "./flows";
  * from the server, and write cookies. Nothing here runs in the browser.
  */
 
+export type ReadOnlyContext = { ok: true; client: ApiClient } | { ok: false; message: string };
 export type RequestContext = { ok: true; client: ApiClient; origin: string } | { ok: false; message: string };
 
-/** The API client and the browser's origin for one request. The origin is forwarded so the API's Origin check still applies. */
+/** Validates whether an Origin string is a well-formed http(s) origin without path, query, hash, or credentials. */
+export function isValidOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return false;
+    }
+    if (url.pathname !== "/" && url.pathname !== "") {
+      return false;
+    }
+    if (url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") {
+      return false;
+    }
+    return url.origin === origin;
+  } catch {
+    return false;
+  }
+}
+
+/** The API client for read-only requests. Does not require or forward an Origin header. */
+export async function readOnlyContext(): Promise<ReadOnlyContext> {
+  const baseUrl = readApiBaseUrl();
+  if (baseUrl === null) {
+    return { ok: false, message: "Sign-in is not configured on this server." };
+  }
+  return { ok: true, client: createApiClient(baseUrl) };
+}
+
+/**
+ * The API client and the browser's origin for state-changing requests.
+ * The origin is forwarded so the API's Origin check still applies.
+ * Rejects missing or malformed Origin headers. Never synthesizes Origin from Host or forwarded headers.
+ */
 export async function requestContext(): Promise<RequestContext> {
   const baseUrl = readApiBaseUrl();
   if (baseUrl === null) {
     return { ok: false, message: "Sign-in is not configured on this server." };
   }
-  const origin = (await headers()).get("origin");
-  if (origin === null || origin === "") {
+  const h = await headers();
+  const origin = h.get("origin");
+  if (!origin || !isValidOrigin(origin)) {
     return { ok: false, message: MESSAGES.generic };
   }
   return { ok: true, client: createApiClient(baseUrl), origin };

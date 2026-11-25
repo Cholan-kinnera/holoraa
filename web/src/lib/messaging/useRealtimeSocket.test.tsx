@@ -8,6 +8,7 @@ import {
   calculateBackoffWithJitter,
   generateUuid,
   isValidEnvelope,
+  resolveWebSocketUrl,
   useRealtimeSocket,
   type UseRealtimeSocketOptions,
   type UseRealtimeSocketReturn,
@@ -780,5 +781,64 @@ describe("useRealtimeSocket unit tests", () => {
     });
 
     expect(latestHookResult?.state).toBe("CONNECTED");
+  });
+
+  describe("Same-Origin Relative WebSocket URL Resolution", () => {
+    it("resolves relative path to ws:// on HTTP page origins", () => {
+      const url = resolveWebSocketUrl("/v1/realtime/ws", {
+        protocol: "http:",
+        host: "localhost:3000",
+      });
+      expect(url).toBe("ws://localhost:3000/v1/realtime/ws");
+    });
+
+    it("resolves relative path to wss:// on HTTPS page origins", () => {
+      const url = resolveWebSocketUrl("/v1/realtime/ws", {
+        protocol: "https:",
+        host: "holoraa.com",
+      });
+      expect(url).toBe("wss://holoraa.com/v1/realtime/ws");
+    });
+
+    it("preserves explicit absolute ws:// and wss:// URLs", () => {
+      const explicitWs = "ws://127.0.0.1:8080/v1/realtime/ws";
+      const explicitWss = "wss://custom.socket.server/ws";
+      expect(resolveWebSocketUrl(explicitWs, { protocol: "http:", host: "localhost:3000" })).toBe(explicitWs);
+      expect(resolveWebSocketUrl(explicitWss, { protocol: "http:", host: "localhost:3000" })).toBe(explicitWss);
+    });
+
+    it("defaults to /v1/realtime/ws when url is null or empty", () => {
+      expect(resolveWebSocketUrl(null, { protocol: "http:", host: "localhost:3000" })).toBe("ws://localhost:3000/v1/realtime/ws");
+      expect(resolveWebSocketUrl("", { protocol: "http:", host: "localhost:3000" })).toBe("ws://localhost:3000/v1/realtime/ws");
+    });
+
+    it("connects to resolved same-origin URL when issueTicket returns relative wsUrl", async () => {
+      const issueTicket = vi.fn().mockResolvedValue({
+        ok: true,
+        ticket: "ticket-relative-1",
+        wsUrl: "/v1/realtime/ws",
+      });
+
+      act(() => {
+        root.render(
+          <TestComponent
+            options={{
+              issueTicket,
+              webSocketFactory: (url, protocols) => new MockWebSocket(url, protocols) as unknown as WebSocket,
+            }}
+          />,
+        );
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(MockWebSocket.instances.length).toBe(1);
+      const socket = MockWebSocket.instances[0]!;
+      // In JSDOM, window.location.host is localhost (or similar), protocol is http:
+      expect(socket.url).toMatch(/^ws:\/\/localhost(:\d+)?\/v1\/realtime\/ws$/);
+      expect(socket.protocols).toContain("holoraa-ticket.ticket-relative-1");
+    });
   });
 });
