@@ -12,7 +12,7 @@
 
 ## Commands (repo root)
 
-Go is not on PATH. Always pass the pinned toolchain: `GO=$HOME/toolchains/go1.27.3/bin/go`.
+Go is not on PATH. Always pass the pinned toolchain: `GO=$HOME/toolchains/go1.27.3/go/bin/go`.
 
 | Need | Command |
 |---|---|
