@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/server";
+import { validateUuid } from "@/lib/messaging/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -9,16 +10,31 @@ export const metadata = {
 };
 
 /**
- * The conversation area. Messaging is not built yet, so this is an honest empty
- * state: nothing is invented, and the composer is disabled.
+ * The conversation area index page. When no conversation is selected,
+ * displays an empty state. If a ?c= query parameter is supplied, redirects
+ * to the canonical /app/c/[conversationId] route.
  */
-export default async function ConversationPage() {
+export default async function ConversationPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ c?: string }>;
+}) {
   const session = await getSession();
   if (session.state !== "signed-in") {
     redirect("/sign-in");
   }
   if (!session.user.profileComplete) {
     redirect("/app/profile?setup=1");
+  }
+
+  if (searchParams) {
+    const resolvedParams = await searchParams;
+    if (resolvedParams?.c) {
+      const uuidError = validateUuid(resolvedParams.c, "conversation ID");
+      if (!uuidError) {
+        redirect(`/app/c/${resolvedParams.c}`);
+      }
+    }
   }
 
   return (
@@ -29,10 +45,10 @@ export default async function ConversationPage() {
         </h1>
       </header>
       <div className="chat__body">
-        <p className="eyebrow">Messaging is in development</p>
-        <h2 className="chat__heading">Nothing is sent or stored yet.</h2>
+        <p className="eyebrow">Direct Messaging</p>
+        <h2 className="chat__heading">Select a conversation or start a new chat.</h2>
         <p className="muted">
-          When messaging opens, your conversations will appear here. Messages cannot be sent yet.
+          Your active 1:1 conversations appear in the sidebar. Choose a conversation to start messaging.
         </p>
       </div>
       <div className="composer">
@@ -44,14 +60,14 @@ export default async function ConversationPage() {
           className="textarea composer__input"
           rows={1}
           disabled
-          placeholder="Messaging is in development"
+          placeholder="Select a conversation to message"
           aria-describedby="composer-note"
         />
         <button className="btn btn--primary" type="button" disabled>
           Send
         </button>
         <p id="composer-note" className="composer__note">
-          Sending is not available yet. Nothing you type here leaves this page.
+          Select a conversation from the sidebar to send messages.
         </p>
       </div>
     </section>

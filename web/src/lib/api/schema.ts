@@ -409,6 +409,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/{id}/messages/{messageId}/delivered": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark message delivered
+         * @description Explicit client delivery acknowledgment for a message.
+         */
+        post: operations["markMessageDelivered"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/realtime/ticket": {
         parameters: {
             query?: never;
@@ -1506,6 +1526,32 @@ export interface operations {
         };
         responses: {
             /** @description Read watermark updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    markMessageDelivered: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message marked as delivered. */
             204: {
                 headers: {
                     [name: string]: unknown;

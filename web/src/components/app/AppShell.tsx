@@ -7,15 +7,27 @@ import { Search } from "@/components/ui/Icons";
 import { SearchOverlay } from "@/components/workspace/SearchOverlay";
 import { UserProfileModal } from "@/components/workspace/UserProfileModal";
 import type { User, UserSummary } from "@/lib/auth/flows";
+import type { Conversation } from "@/lib/messaging/flows";
 
+import { ConversationList } from "./ConversationList";
 import { ProfileMenu } from "./ProfileMenu";
 import { ShellFrame } from "./ShellFrame";
+import { MessagingProvider } from "@/lib/messaging/MessagingProvider";
 
 /**
  * The signed-in application shell. Shows conversations in the sidebar and
  * provides user discovery search and profile viewing.
  */
-export function AppShell({ user, children }: { user: User; children: ReactNode }) {
+export function AppShell({
+  user,
+  initialConversations,
+  children,
+}: {
+  user: User;
+  /** Server-fetched list; undefined means the client fetches it on mount. */
+  initialConversations?: Conversation[];
+  children: ReactNode;
+}) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
 
@@ -32,7 +44,7 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
   }, []);
 
   return (
-    <>
+    <MessagingProvider user={user} initialConversations={initialConversations}>
       <ShellFrame
         sidebar={
           <>
@@ -50,11 +62,7 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
                 <kbd className="shell__search-kbd">⌘K</kbd>
               </button>
             </div>
-            <h2 className="shell__heading">Conversations</h2>
-            <p className="empty">No conversations yet.</p>
-            <p className="faint shell__note">
-              Messaging is in development, so conversations are not stored or delivered yet.
-            </p>
+            <ConversationList onStartSearch={() => setIsSearchOpen(true)} />
           </>
         }
         account={<ProfileMenu user={user} signOut={signOutAction} />}
@@ -74,6 +82,6 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
         onClose={() => setSelectedUser(null)}
         isCurrentUser={selectedUser?.username === user.username}
       />
-    </>
+    </MessagingProvider>
   );
 }
