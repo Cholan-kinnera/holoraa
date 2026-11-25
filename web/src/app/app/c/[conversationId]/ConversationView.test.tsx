@@ -90,6 +90,12 @@ describe("ConversationView composer and request rules", () => {
   }
   const textarea = () => container.querySelector("textarea");
 
+  it("offers a way back to the chat list and greets an empty conversation", async () => {
+    await render(conversation(), []);
+    expect(container.querySelector('a[aria-label="Back to chats"]')?.getAttribute("href")).toBe("/app");
+    expect(container.textContent).toContain("Say hello to Bob");
+  });
+
   it("is open in an accepted conversation", async () => {
     await render(conversation());
     expect(textarea()?.disabled).toBe(false);

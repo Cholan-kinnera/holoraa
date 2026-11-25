@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -159,6 +160,11 @@ export function ConversationView({
       data-connection-state={connectionState}
     >
       <header className="thread__header">
+        <Link href="/app" className="thread__back" aria-label="Back to chats">
+          <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+            <path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
         <Avatar src={peer.avatarUrl} alt={peerName} size="lg" />
         <div className="thread__who">
           <h1 id="active-chat-title" className="thread__name">
@@ -206,8 +212,10 @@ export function ConversationView({
               <Skeleton className="skeleton--pill thread__ghost thread__ghost--short" />
             </div>
           ) : activeMessages.length === 0 ? (
-            <div className="thread__empty">
-              <p>No messages yet. Say hello to {peerName}.</p>
+            <div className="thread__empty thread__empty--hello">
+              <Avatar src={peer.avatarUrl} alt={peerName} size="2xl" />
+              <p className="thread__empty-title">Say hello to {peerName}</p>
+              <p>No messages yet. Your conversation starts here.</p>
             </div>
           ) : (
             <>

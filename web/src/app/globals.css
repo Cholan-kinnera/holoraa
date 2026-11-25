@@ -2259,6 +2259,40 @@ textarea::placeholder {
   margin: 0;
 }
 
+.thread__empty--hello .avatar-container {
+  margin-bottom: var(--space-2);
+  box-shadow: 0 0 0 6px rgb(232 108 79 / 0.08), 0 0 0 12px rgb(232 108 79 / 0.04);
+}
+
+.thread__empty-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  color: var(--paper);
+}
+
+.thread__back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: 50%;
+  color: var(--paper);
+  flex-shrink: 0;
+}
+
+.thread__back:hover {
+  background: var(--bg-oled-hover);
+}
+
+/* Desktop: the sidebar runs the full height next to the chat panel. */
+@media (min-width: 48rem) {
+  .shell:has(.chat) .shell__sidebar {
+    align-self: stretch;
+  }
+}
+
 .thread__placeholder {
   margin-top: auto;
   display: grid;
@@ -2504,7 +2538,34 @@ textarea::placeholder {
 
 @media (max-width: 47.99rem) {
   .thread__header {
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .thread__back {
+    display: inline-flex;
+  }
+
+  /* 16px stops iOS Safari zooming into the field on focus. */
+  .thread__composer .composer__input {
+    font-size: 1rem;
+  }
+
+  .composer.thread__composer,
+  .request-bar {
+    padding: var(--space-3) var(--space-3) max(var(--space-3), env(safe-area-inset-bottom));
+  }
+
+  .request-bar__actions {
+    width: 100%;
+  }
+
+  .request-bar__actions .btn {
+    flex: 1;
+  }
+
+  .thread__jump {
+    right: var(--space-3);
   }
 
   .thread__content {
