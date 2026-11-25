@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
-import { Skeleton } from "@/components/ui/Skeleton";
 import type { Conversation, Message } from "@/lib/messaging/flows";
 import type { RealtimeConnectionState } from "@/lib/messaging/realtime-types";
 import { useMessaging } from "@/lib/messaging/useMessaging";
 
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
+import { ThreadGhosts } from "./ThreadSkeleton";
 import { RequestBar } from "./RequestBar";
 import { useThreadScroll } from "./useThreadScroll";
 
@@ -206,11 +206,7 @@ export function ConversationView({
               </button>
             </div>
           ) : !loaded ? (
-            <div className="thread__placeholder" aria-busy="true" aria-label="Loading messages">
-              <Skeleton className="skeleton--pill thread__ghost" />
-              <Skeleton className="skeleton--pill thread__ghost thread__ghost--mine" />
-              <Skeleton className="skeleton--pill thread__ghost thread__ghost--short" />
-            </div>
+            <ThreadGhosts />
           ) : activeMessages.length === 0 ? (
             <div className="thread__empty thread__empty--hello">
               <Avatar src={peer.avatarUrl} alt={peerName} size="2xl" />

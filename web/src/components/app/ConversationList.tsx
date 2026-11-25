@@ -167,12 +167,12 @@ function previewText(c: Conversation, currentUserId: string | null): string {
 function ConversationListSkeleton() {
   return (
     <ul className="conv-list__items" aria-busy="true" aria-label="Loading conversations">
-      {[0, 1, 2].map((i) => (
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
         <li key={i} className="conv-row conv-row--skeleton">
           <SkeletonAvatar size="md" />
           <span className="conv-row__body">
-            <SkeletonText className="w-1/2" />
-            <SkeletonText className="w-3/4" />
+            <SkeletonText className="conv-skel__name" />
+            <SkeletonText className="conv-skel__preview" />
           </span>
         </li>
       ))}
