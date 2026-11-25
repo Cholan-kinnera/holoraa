@@ -34,6 +34,8 @@ export interface MessagingState {
   conversations: Conversation[];
   conversationsLoading: boolean;
   conversationsError: string | null;
+  /** Set when realtime reports a conversation the list does not know; triggers a refetch. */
+  conversationsStale: boolean;
   activeConversationId: string | null;
   messages: Record<string, UiMessage[]>;
   messagesLoading: Record<string, boolean>;
@@ -53,6 +55,7 @@ export const initialMessagingState: MessagingState = {
   conversations: [],
   conversationsLoading: false,
   conversationsError: null,
+  conversationsStale: false,
   activeConversationId: null,
   messages: {},
   messagesLoading: {},
@@ -76,6 +79,14 @@ export function sortConversationsByRecent(conversations: Conversation[]): Conver
     const timeB = b.lastMessage?.createdAt ?? b.updatedAt;
     return compareTimestamps(timeA, timeB);
   });
+}
+
+/** Returns the list with one conversation's unread count set to 0 (same array if nothing changes). */
+function clearUnread(conversations: Conversation[], conversationId: string): Conversation[] {
+  if (!conversations.some((c) => c.id === conversationId && c.unreadCount > 0)) {
+    return conversations;
+  }
+  return conversations.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c));
 }
 
 /** Normalizes a server Message into a UiMessage. */
@@ -183,6 +194,7 @@ export type MessagingAction =
   | { type: "CONVERSATIONS_SUCCESS"; conversations: Conversation[] }
   | { type: "CONVERSATIONS_ERROR"; error: string }
   | { type: "SELECT_CONVERSATION"; conversationId: string | null }
+  | { type: "CONVERSATION_MARKED_READ"; conversationId: string }
   | { type: "MESSAGES_LOADING"; conversationId: string }
   | {
       type: "MESSAGES_SUCCESS";
@@ -254,6 +266,7 @@ export function messagingReducer(
         ...state,
         conversationsLoading: false,
         conversationsError: null,
+        conversationsStale: false,
         conversations: sortConversationsByRecent(action.conversations),
       };
 
@@ -262,10 +275,21 @@ export function messagingReducer(
         ...state,
         conversationsLoading: false,
         conversationsError: action.error,
+        // Cleared so a failing refetch cannot loop; focus and reconnect retry later.
+        conversationsStale: false,
       };
 
     case "SELECT_CONVERSATION":
-      return { ...state, activeConversationId: action.conversationId };
+      return {
+        ...state,
+        activeConversationId: action.conversationId,
+        conversations: action.conversationId
+          ? clearUnread(state.conversations, action.conversationId)
+          : state.conversations,
+      };
+
+    case "CONVERSATION_MARKED_READ":
+      return { ...state, conversations: clearUnread(state.conversations, action.conversationId) };
 
     case "MESSAGES_LOADING":
       return {
@@ -419,29 +443,39 @@ export function messagingReducer(
       const currentMessages = state.messages[p.conversationId] ?? [];
       const updatedMessages = reconcileMessages(currentMessages, incomingUi);
 
-      // Update sidebar conversation snippet
-      const convExists = state.conversations.some((c) => c.id === p.conversationId);
-      let updatedConvs: Conversation[];
-      if (convExists) {
-        updatedConvs = state.conversations.map((c) => {
-          if (c.id === p.conversationId) {
-            return {
+      const conv = state.conversations.find((c) => c.id === p.conversationId);
+      if (!conv) {
+        // Unknown conversation (e.g. a new request): the provider refetches the list.
+        return {
+          ...state,
+          messages: { ...state.messages, [p.conversationId]: updatedMessages },
+          conversationsStale: true,
+        };
+      }
+
+      // Count it once, only for the peer's messages in a conversation not on screen.
+      const alreadySeen =
+        conv.lastMessage?.id === p.messageId ||
+        currentMessages.some((m) => m.id === p.messageId);
+      const countsAsUnread =
+        !isSelf && !alreadySeen && state.activeConversationId !== p.conversationId;
+
+      const updatedConvs = state.conversations.map((c) =>
+        c.id === p.conversationId
+          ? {
               ...c,
               updatedAt: p.createdAt,
+              lastMessageSequence: Math.max(c.lastMessageSequence, p.sequenceNum),
+              unreadCount: countsAsUnread ? c.unreadCount + 1 : c.unreadCount,
               lastMessage: {
                 id: p.messageId,
                 senderId: p.senderId,
                 content: p.content,
                 createdAt: p.createdAt,
               },
-            };
-          }
-          return c;
-        });
-      } else {
-        // Will be refreshed by refreshConversations if new
-        updatedConvs = state.conversations;
-      }
+            }
+          : c,
+      );
 
       return {
         ...state,
@@ -492,6 +526,9 @@ export function messagingReducer(
 
     case "REALTIME_CONVERSATION_UPDATED": {
       const p = action.payload;
+      if (!state.conversations.some((c) => c.id === p.conversationId)) {
+        return { ...state, conversationsStale: true };
+      }
       const updatedConvs = state.conversations.map((c) => {
         if (c.id === p.conversationId) {
           return {

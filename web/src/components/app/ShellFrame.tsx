@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { BrandMark } from "@/components/ui/Brand";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -8,8 +9,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 /**
  * Layout for the signed-in app: a header, a conversation sidebar, and the main
  * area. On small screens the sidebar becomes a drawer. The drawer closes on
- * Escape, from the scrim, and when the toggle is pressed again, and focus
- * returns to the toggle.
+ * Escape, from the scrim, and when the toggle is pressed again (focus returns
+ * to the toggle), and on navigation.
  */
 export function ShellFrame({
   sidebar,
@@ -23,6 +24,14 @@ export function ShellFrame({
   const [navOpen, setNavOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   const sidebarId = useId();
+
+  // Close the drawer when a link in it navigates (e.g. opening a conversation).
+  const pathname = usePathname();
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setNavOpen(false);
+  }
 
   useEffect(() => {
     if (!navOpen) {

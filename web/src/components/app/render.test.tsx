@@ -29,9 +29,14 @@ describe("app render", () => {
   });
 
   it("renders the shell with the empty conversation state and no invented contacts", () => {
-    const html = renderToStaticMarkup(<AppShell user={hostile}>{null}</AppShell>);
+    const html = renderToStaticMarkup(
+      <AppShell user={hostile} initialConversations={[]}>
+        {null}
+      </AppShell>,
+    );
     expect(html).toContain("No conversations yet.");
-    expect(html).toContain("Messaging is in development");
+    expect(html).toContain("Find people to message");
+    expect(html).not.toContain("conv-row");
   });
 
   it("renders the sign-in email step with an accessible field and no inline styles", () => {

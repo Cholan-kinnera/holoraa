@@ -29,6 +29,7 @@ import {
 import {
   initialMessagingState,
   messagingReducer,
+  sortConversationsByRecent,
   type MessagingState,
   type UiMessage,
 } from "./state";
@@ -63,6 +64,9 @@ export interface MessagingContextValue extends MessagingState {
 
 const MessagingContext = createContext<MessagingContextValue | null>(null);
 
+/** Minimum gap between focus-triggered conversation refetches. */
+const FOCUS_REFETCH_MIN_MS = 15_000;
+
 export interface MessagingProviderProps {
   user: User;
   children: ReactNode;
@@ -80,8 +84,34 @@ export function MessagingProvider({
   const [state, dispatch] = useReducer(messagingReducer, {
     ...initialMessagingState,
     currentUserId: user.id,
-    conversations: initialConversations ?? [],
+    conversations: sortConversationsByRecent(initialConversations ?? []),
   });
+
+  // Latest committed state, for callbacks that must not capture a stale render.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Mark a conversation read up to its newest confirmed message. Reads stateRef so it
+  // is stable and never sees an empty list from a stale render. Optimistic messages
+  // ("opt-" ids) are skipped: the server does not know them yet.
+  const markAsRead = useCallback(async (conversationId: string, messageId?: string) => {
+    const current = stateRef.current;
+    const confirmed = (current.messages[conversationId] ?? []).filter((m) => !m.isOptimistic);
+    const conv = current.conversations.find((c) => c.id === conversationId);
+    const targetMessageId =
+      messageId ?? confirmed[confirmed.length - 1]?.id ?? conv?.lastMessage?.id;
+    if (!targetMessageId || targetMessageId.startsWith("opt-")) return;
+    try {
+      const res = await markConversationReadAction(conversationId, targetMessageId);
+      if (res.ok) {
+        dispatch({ type: "CONVERSATION_MARKED_READ", conversationId });
+      }
+    } catch {
+      // Non-fatal: the server count stays as is and the next refetch shows it.
+    }
+  }, []);
 
   // Ensure current user is synced
   useEffect(() => {
@@ -117,21 +147,30 @@ export function MessagingProvider({
     });
   }, [realtime.state, realtime.error]);
 
-  // Subscribe to typed realtime events
+  // Subscribe to typed realtime events. `subscribe` is stable, so this runs once
+  // (depending on the whole `realtime` object re-subscribed on every render).
+  const { subscribe } = realtime;
   useEffect(() => {
-    const unsubCreated = realtime.subscribe("message.created", (payload) => {
+    const unsubCreated = subscribe("message.created", (payload) => {
       dispatch({ type: "REALTIME_MESSAGE_CREATED", payload });
+      // A peer message in the open conversation is read as it arrives.
+      if (
+        payload.senderId !== user.id &&
+        stateRef.current.activeConversationId === payload.conversationId
+      ) {
+        void markAsRead(payload.conversationId, payload.messageId);
+      }
     });
 
-    const unsubDelivered = realtime.subscribe("message.delivered", (payload) => {
+    const unsubDelivered = subscribe("message.delivered", (payload) => {
       dispatch({ type: "REALTIME_MESSAGE_DELIVERED", payload });
     });
 
-    const unsubRead = realtime.subscribe("message.read", (payload) => {
+    const unsubRead = subscribe("message.read", (payload) => {
       dispatch({ type: "REALTIME_MESSAGE_READ", payload });
     });
 
-    const unsubUpdated = realtime.subscribe("conversation.updated", (payload) => {
+    const unsubUpdated = subscribe("conversation.updated", (payload) => {
       dispatch({ type: "REALTIME_CONVERSATION_UPDATED", payload });
     });
 
@@ -141,10 +180,21 @@ export function MessagingProvider({
       unsubRead();
       unsubUpdated();
     };
-  }, [realtime]);
+  }, [subscribe, markAsRead, user.id]);
 
-  // 1. Fetch conversations on initial mount if not provided
-  const refreshConversations = useCallback(async () => {
+  // 1. Fetch conversations. One request at a time; lastFetchRef throttles focus refetches.
+  // A request made while one is running queues exactly one follow-up, so an event
+  // that arrives mid-fetch is never answered by a list fetched before it.
+  const fetchInFlightRef = useRef(false);
+  const fetchQueuedRef = useRef(false);
+  const lastFetchRef = useRef(0);
+  const refreshConversations = useCallback(async function run(): Promise<void> {
+    if (fetchInFlightRef.current) {
+      fetchQueuedRef.current = true;
+      return;
+    }
+    fetchInFlightRef.current = true;
+    lastFetchRef.current = Date.now();
     dispatch({ type: "CONVERSATIONS_LOADING" });
     try {
       const res = await getConversationsAction();
@@ -161,18 +211,60 @@ export function MessagingProvider({
         type: "CONVERSATIONS_ERROR",
         error: "Failed to load conversations.",
       });
+    } finally {
+      fetchInFlightRef.current = false;
+      if (fetchQueuedRef.current) {
+        fetchQueuedRef.current = false;
+        void run();
+      }
     }
   }, []);
 
+  // Fetch on mount only when the server did not hydrate the list. An empty
+  // server list is a real answer, not a reason to refetch.
   const initialFetchDoneRef = useRef(false);
   useEffect(() => {
     if (!initialFetchDoneRef.current) {
       initialFetchDoneRef.current = true;
-      if (!initialConversations || initialConversations.length === 0) {
-        refreshConversations();
+      if (initialConversations === undefined) {
+        void refreshConversations();
+      } else {
+        lastFetchRef.current = Date.now(); // the server fetch counts for the focus throttle
       }
     }
   }, [initialConversations, refreshConversations]);
+
+  // Refetch when realtime mentions a conversation the list does not have.
+  useEffect(() => {
+    if (state.conversationsStale) {
+      void refreshConversations();
+    }
+  }, [state.conversationsStale, refreshConversations]);
+
+  // Refetch after a reconnect: events sent while offline were missed.
+  const hasConnectedRef = useRef(false);
+  useEffect(() => {
+    if (realtime.state !== "CONNECTED") return;
+    if (hasConnectedRef.current) {
+      void refreshConversations();
+    }
+    hasConnectedRef.current = true;
+  }, [realtime.state, refreshConversations]);
+
+  // Refetch when the window regains focus (unread counts read on another device).
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastFetchRef.current < FOCUS_REFETCH_MIN_MS) return;
+      void refreshConversations();
+    }
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshConversations]);
 
   // 2. Select conversation
   const selectConversation = useCallback((conversationId: string | null) => {
@@ -236,11 +328,6 @@ export function MessagingProvider({
   );
 
   // 4. Load older messages (pagination scroll-up)
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
   const loadOlderMessages = useCallback(async (conversationId: string) => {
     const pag = stateRef.current.pagination[conversationId];
     if (!pag || !pag.hasMoreOlder || pag.loadingOlder || !pag.oldestCursor) {
@@ -430,19 +517,6 @@ export function MessagingProvider({
       return { ok: false, error: "Failed to decline message request." };
     }
   }, []);
-
-  // 9. Mark conversation read
-  const markAsRead = useCallback(async (conversationId: string, messageId?: string) => {
-    try {
-      const msgs = state.messages[conversationId];
-      const lastMsg = msgs && msgs.length > 0 ? msgs[msgs.length - 1] : undefined;
-      const targetMessageId = messageId ?? lastMsg?.id;
-      if (!targetMessageId) return;
-      await markConversationReadAction(conversationId, targetMessageId);
-    } catch {
-      // Non-fatal read watermark advancement
-    }
-  }, [state.messages]);
 
   // Derived states
   const activeConversation = useMemo(() => {
