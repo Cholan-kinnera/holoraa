@@ -27,6 +27,8 @@ export interface PaginationState {
   newestCursor?: string;
   hasMoreOlder: boolean;
   loadingOlder: boolean;
+  /** Set when the last older-page fetch failed; cleared on the next attempt. */
+  olderError?: string | null;
 }
 
 export interface MessagingState {
@@ -89,6 +91,23 @@ function clearUnread(conversations: Conversation[], conversationId: string): Con
   return conversations.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c));
 }
 
+// Delivery progress of a confirmed message. Status only moves forward.
+const STATUS_RANK: Record<MessageDeliveryStatus, number> = {
+  failed: 0,
+  sending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+};
+
+/** Returns whichever status is further along; equal ranks keep the incoming one. */
+export function furthestStatus(
+  existing: MessageDeliveryStatus,
+  incoming: MessageDeliveryStatus,
+): MessageDeliveryStatus {
+  return STATUS_RANK[existing] > STATUS_RANK[incoming] ? existing : incoming;
+}
+
 /** Normalizes a server Message into a UiMessage. */
 export function toUiMessage(
   msg: Message,
@@ -142,11 +161,8 @@ export function reconcileMessages(
       updated[existingByIdIndex] = {
         ...existing,
         ...incoming,
-        // Don't downgrade read -> delivered or sent
-        deliveryStatus:
-          existing.deliveryStatus === "read"
-            ? "read"
-            : incoming.deliveryStatus,
+        // Never downgrade (e.g. a late HTTP confirm must not undo "delivered").
+        deliveryStatus: furthestStatus(existing.deliveryStatus, incoming.deliveryStatus),
       };
     }
     return updated;
@@ -204,6 +220,8 @@ export type MessagingAction =
       oldestCursor?: string;
     }
   | { type: "MESSAGES_ERROR"; conversationId: string; error: string }
+  | { type: "OLDER_MESSAGES_LOADING"; conversationId: string }
+  | { type: "OLDER_MESSAGES_ERROR"; conversationId: string; error: string }
   | {
       type: "OLDER_MESSAGES_SUCCESS";
       conversationId: string;
@@ -326,6 +344,7 @@ export function messagingReducer(
             oldestCursor: oldest,
             hasMoreOlder: action.hasMoreOlder ?? false,
             loadingOlder: false,
+            olderError: null,
           },
         },
       };
@@ -337,6 +356,28 @@ export function messagingReducer(
         messagesLoading: { ...state.messagesLoading, [action.conversationId]: false },
         messagesError: { ...state.messagesError, [action.conversationId]: action.error },
       };
+
+    case "OLDER_MESSAGES_LOADING": {
+      const pag = state.pagination[action.conversationId] ?? initialPaginationState;
+      return {
+        ...state,
+        pagination: {
+          ...state.pagination,
+          [action.conversationId]: { ...pag, loadingOlder: true, olderError: null },
+        },
+      };
+    }
+
+    case "OLDER_MESSAGES_ERROR": {
+      const pag = state.pagination[action.conversationId] ?? initialPaginationState;
+      return {
+        ...state,
+        pagination: {
+          ...state.pagination,
+          [action.conversationId]: { ...pag, loadingOlder: false, olderError: action.error },
+        },
+      };
+    }
 
     case "OLDER_MESSAGES_SUCCESS": {
       const convId = action.conversationId;
@@ -359,6 +400,7 @@ export function messagingReducer(
             oldestCursor: action.oldestCursor,
             hasMoreOlder: action.hasMoreOlder,
             loadingOlder: false,
+            olderError: null,
           },
         },
       };
@@ -401,11 +443,35 @@ export function messagingReducer(
         "sent",
       );
       const currentMessages = state.messages[convId] ?? [];
+      const optimisticId = currentMessages.find(
+        (m) => m.isOptimistic && m.clientMessageId === action.clientMessageId,
+      )?.id;
       const updatedMessages = reconcileMessages(currentMessages, confirmedUi);
+
+      // Swap the sidebar snippet's temporary "opt-" id for the real one, so later
+      // realtime events for this message are recognised as already seen.
+      const confirmed = action.confirmedMessage;
+      const conversations = optimisticId
+        ? state.conversations.map((c) =>
+            c.id === convId && c.lastMessage?.id === optimisticId
+              ? {
+                  ...c,
+                  lastMessageSequence: Math.max(c.lastMessageSequence, confirmed.sequenceNum),
+                  lastMessage: {
+                    id: confirmed.id,
+                    senderId: confirmed.senderId,
+                    content: confirmed.content,
+                    createdAt: confirmed.createdAt,
+                  },
+                }
+              : c,
+          )
+        : state.conversations;
 
       return {
         ...state,
         messages: { ...state.messages, [convId]: updatedMessages },
+        conversations,
       };
     }
 
@@ -503,12 +569,14 @@ export function messagingReducer(
     }
 
     case "REALTIME_MESSAGE_READ": {
-      const { conversationId, sequenceNum } = action.payload;
+      // The reader is the peer: only messages they received (ours) become "read".
+      const { conversationId, sequenceNum, userId: readerId } = action.payload;
       const currentMessages = state.messages[conversationId];
       if (!currentMessages) return state;
 
       const updated = currentMessages.map((m) => {
         if (
+          m.senderId !== readerId &&
           m.sequenceNum > 0 &&
           m.sequenceNum <= sequenceNum &&
           (m.deliveryStatus === "sent" || m.deliveryStatus === "delivered")

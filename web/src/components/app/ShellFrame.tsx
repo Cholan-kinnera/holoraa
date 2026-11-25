@@ -69,9 +69,9 @@ export function ShellFrame({
               {navOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 8h16M4 16h16" />}
             </svg>
           </button>
-          <Link href="/app" className="brand">
-            <BrandMark />
-            Holoraa
+          {/* Inside the app the symbol alone carries the brand; the name is on the landing page. */}
+          <Link href="/app" className="brand" aria-label="Holoraa home">
+            <BrandMark size={32} />
           </Link>
         </div>
         {account}

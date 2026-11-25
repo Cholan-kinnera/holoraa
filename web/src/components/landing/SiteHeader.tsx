@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { BrandMark } from "@/components/ui/Brand";
+import { BrandLogo } from "@/components/ui/Brand";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
 const LINKS: ReadonlyArray<{ href: string; label: string }> = [
@@ -43,8 +43,7 @@ export function SiteHeader() {
   return (
     <header className="site-header glass">
       <Link href="/" className="brand" aria-label="Holoraa home">
-        <BrandMark />
-        Holoraa
+        <BrandLogo />
       </Link>
 
       <div className="site-nav">

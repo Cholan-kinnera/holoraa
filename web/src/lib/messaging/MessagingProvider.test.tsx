@@ -12,6 +12,12 @@ import { AppShell } from "@/components/app/AppShell";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// ConversationView navigates after a declined request; no app router is mounted here.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => null,
+}));
+
 const testUser: User = {
   id: "11111111-1111-4111-8111-111111111111",
   email: "alice@example.com",
@@ -92,6 +98,7 @@ describe("MessagingProvider & ConversationView Integration", () => {
             conversationId={testConversation.id}
             initialConversation={testConversation}
             initialMessages={initialServerMessages}
+            initialHasMore={false}
           />
         </AppShell>,
       );
@@ -99,7 +106,9 @@ describe("MessagingProvider & ConversationView Integration", () => {
 
     expect(container.textContent).toContain("Bob");
     expect(container.textContent).toContain("@bob");
-    expect(container.textContent).toContain("2 messages synchronized.");
+    const bubbles = [...container.querySelectorAll(".msg")].map((el) => el.textContent);
+    expect(bubbles).toEqual(["You: First message from Alice", "Reply from Bob"]);
+    expect(container.textContent).not.toContain("synchronized");
   });
 
   it("hydrates initial server-fetched messages into state", async () => {
@@ -118,6 +127,7 @@ describe("MessagingProvider & ConversationView Integration", () => {
             conversationId={testConversation.id}
             initialConversation={testConversation}
             initialMessages={initialServerMessages}
+            initialHasMore={false}
           />
           <TestConsumer />
         </MessagingProvider>,
@@ -219,6 +229,7 @@ describe("MessagingProvider & ConversationView Integration", () => {
               conversationId={testConversation.id}
               initialConversation={testConversation}
               initialMessages={initialServerMessages}
+              initialHasMore={false}
             />
           </AppShell>
         </StrictMode>,
@@ -226,7 +237,7 @@ describe("MessagingProvider & ConversationView Integration", () => {
     });
 
     expect(container.textContent).toContain("Bob");
-    expect(container.textContent).toContain("2 messages synchronized.");
+    expect(container.querySelectorAll(".msg")).toHaveLength(2);
   });
 
   describe("Keyset pagination cursor derivation (Finding 2)", () => {
@@ -387,6 +398,74 @@ describe("MessagingProvider & ConversationView Integration", () => {
 
       // Reconciled messages in activeMessages must contain all 4 without duplicates, sorted ascending
       expect(contextHandle!.activeMessages.map((m) => m.sequenceNum)).toEqual([6, 7, 8, 10]);
+    });
+
+    async function mountWithOlderPage() {
+      let contextHandle: ReturnType<typeof useMessaging> | null = null;
+      function TestController() {
+        contextHandle = useMessaging();
+        return null;
+      }
+      await act(async () => {
+        root.render(
+          <MessagingProvider user={testUser}>
+            <TestController />
+          </MessagingProvider>,
+        );
+      });
+      await act(async () => {
+        contextHandle!.hydrateConversationMessages(
+          testConversation.id,
+          initialServerMessages,
+          true,
+          initialServerMessages[0]!.id,
+        );
+      });
+      return () => contextHandle!;
+    }
+
+    it("loadOlderMessages runs one fetch at a time and flags loading", async () => {
+      const actionsModule = await import("@/app/app/messages/actions");
+      let resolveFetch: (v: { ok: true; messages: Message[]; hasMore: boolean }) => void = () => {};
+      const getMessagesSpy = vi
+        .spyOn(actionsModule, "getMessagesAction")
+        .mockImplementation(() => new Promise((resolve) => (resolveFetch = resolve)));
+      const ctx = await mountWithOlderPage();
+
+      let first: Promise<void> = Promise.resolve();
+      await act(async () => {
+        first = ctx().loadOlderMessages(testConversation.id);
+        void ctx().loadOlderMessages(testConversation.id); // same tick: must be ignored
+      });
+      expect(getMessagesSpy).toHaveBeenCalledTimes(1);
+      expect(ctx().pagination[testConversation.id]?.loadingOlder).toBe(true);
+
+      await act(async () => {
+        resolveFetch({ ok: true, messages: [], hasMore: false });
+        await first;
+      });
+      expect(ctx().pagination[testConversation.id]?.loadingOlder).toBe(false);
+    });
+
+    it("loadOlderMessages records a failure and allows a retry", async () => {
+      const actionsModule = await import("@/app/app/messages/actions");
+      const getMessagesSpy = vi
+        .spyOn(actionsModule, "getMessagesAction")
+        .mockResolvedValue({ ok: false, message: "Network down." });
+      const ctx = await mountWithOlderPage();
+
+      await act(async () => {
+        await ctx().loadOlderMessages(testConversation.id);
+      });
+      const pag = ctx().pagination[testConversation.id];
+      expect(pag?.loadingOlder).toBe(false);
+      expect(pag?.olderError).toBe("Network down.");
+      expect(pag?.hasMoreOlder).toBe(true);
+
+      await act(async () => {
+        await ctx().loadOlderMessages(testConversation.id);
+      });
+      expect(getMessagesSpy).toHaveBeenCalledTimes(2);
     });
 
     it("correctly handles single-message and empty arrays for oldestCursor", async () => {

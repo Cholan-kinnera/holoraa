@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Menu, X } from '../ui/Icons';
-import { BrandLogo, BrandMark } from '../ui/Brand';
+import { BrandLogo } from '../ui/Brand';
 
 export function FloatingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,8 +35,7 @@ export function FloatingNavbar() {
             }
           }}
         >
-          <BrandMark className="w-6 h-6" />
-          <BrandLogo className="text-base font-semibold tracking-tight text-white" />
+          <BrandLogo />
         </div>
 
         <div className="navbar-nav-links">

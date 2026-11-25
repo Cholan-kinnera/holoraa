@@ -41,6 +41,48 @@ export function formatFullTimestamp(iso: string | null | undefined, locale?: str
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+/** Clock time for a message bubble, e.g. "14:32". Invalid input gives "". */
+export function formatClockTime(iso: string | null | undefined, locale?: string): string {
+  const date = parse(iso);
+  if (!date) return "";
+  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+/**
+ * Label for a date separator in a conversation: "Today", "Yesterday", a weekday
+ * within the last week, "12 March" this year, "12 March 2025" otherwise.
+ */
+export function formatDayLabel(
+  iso: string | null | undefined,
+  now: Date = new Date(),
+  locale?: string,
+): string {
+  const date = parse(iso);
+  if (!date) return "";
+  const days = calendarDaysBetween(date, now);
+  if (days <= 0) return "Today"; // future (clock skew) reads as today
+  if (days === 1) return "Yesterday";
+  if (days < 7) return new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+  }).format(date);
+}
+
+/** True when both timestamps fall on the same local calendar day. */
+export function isSameLocalDay(a: string, b: string): boolean {
+  const da = parse(a);
+  const db = parse(b);
+  return da !== null && db !== null && isSameDay(da, db);
+}
+
+function parse(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return calendarDaysBetween(a, b) === 0;
 }

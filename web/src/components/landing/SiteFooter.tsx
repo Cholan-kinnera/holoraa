@@ -7,7 +7,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="site-footer__inner">
         <div>
-          <BrandLogo width={120} />
+          <BrandLogo size={32} />
           <p className="faint">One simple place to talk and share. Early build.</p>
         </div>
         <nav aria-label="Footer">

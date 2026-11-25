@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { formatFullTimestamp, formatRelativeTime } from "./time";
+import {
+  formatClockTime,
+  formatDayLabel,
+  formatFullTimestamp,
+  formatRelativeTime,
+  isSameLocalDay,
+} from "./time";
 
 // Wed 25 Nov 2026, 15:00 local time. Local constructors keep day boundaries
 // independent of the machine's time zone.
@@ -53,5 +59,39 @@ describe("formatFullTimestamp", () => {
   it("formats a full date and time, and is empty for invalid input", () => {
     expect(formatFullTimestamp(at(2026, 10, 25, 9, 5), "en-GB")).toMatch(/25 Nov 2026.*09:05/);
     expect(formatFullTimestamp("nope")).toBe("");
+  });
+});
+
+describe("formatDayLabel", () => {
+  const day = (iso: string | null | undefined) => formatDayLabel(iso, now, "en-GB");
+
+  it("names today, yesterday and the last week", () => {
+    expect(day(at(2026, 10, 25, 0, 1))).toBe("Today");
+    expect(day(at(2026, 10, 26, 9))).toBe("Today"); // clock skew
+    expect(day(at(2026, 10, 24, 23, 59))).toBe("Yesterday");
+    expect(day(at(2026, 10, 20, 12))).toBe("Friday");
+  });
+
+  it("uses the date for older days, with the year only when it differs", () => {
+    expect(day(at(2026, 10, 18, 12))).toBe("18 November");
+    expect(day(at(2025, 2, 12, 12))).toBe("12 March 2025");
+  });
+
+  it("returns an empty string for missing or invalid input", () => {
+    expect(day(undefined)).toBe("");
+    expect(day("not a date")).toBe("");
+  });
+});
+
+describe("formatClockTime and isSameLocalDay", () => {
+  it("formats the local clock time", () => {
+    expect(formatClockTime(at(2026, 10, 25, 9, 5), "en-GB")).toBe("09:05");
+    expect(formatClockTime("bad", "en-GB")).toBe("");
+  });
+
+  it("compares local calendar days", () => {
+    expect(isSameLocalDay(at(2026, 10, 25, 0, 1), at(2026, 10, 25, 23, 59))).toBe(true);
+    expect(isSameLocalDay(at(2026, 10, 24, 23, 59), at(2026, 10, 25, 0, 1))).toBe(false);
+    expect(isSameLocalDay("bad", at(2026, 10, 25))).toBe(false);
   });
 });
