@@ -1987,9 +1987,10 @@ textarea::placeholder {
   min-height: 2.75rem;
   height: 2.75rem;
   max-height: 10rem;
-  overflow-y: auto;
+  overflow-y: hidden;
   border-radius: 1.375rem;
-  padding: 0.6875rem 1.125rem;
+  /* 10px + 22px line + 10px + 2px border = the 44px send button. */
+  padding: 0.625rem 1.125rem;
   line-height: 1.375rem;
   background: var(--ink-850);
 }
@@ -2090,6 +2091,13 @@ textarea::placeholder {
 .shell:has(.thread) {
   height: 100dvh;
   min-height: 0;
+}
+
+/* The chat screen is a fixed-height app view: the page itself never scrolls,
+   only the thread and the sidebar do. */
+html:has(.thread),
+html:has(.thread) body {
+  overflow: hidden;
 }
 
 .shell:has(.thread) .shell__body {

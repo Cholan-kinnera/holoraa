@@ -15,6 +15,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The dev badge sits below the page and adds scroll height to the
+  // fixed-height chat view. Build and runtime errors are still shown.
+  devIndicators: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

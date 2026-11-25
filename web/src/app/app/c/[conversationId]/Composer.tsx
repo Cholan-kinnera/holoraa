@@ -39,7 +39,11 @@ export function Composer({
 
   function resize(el: HTMLTextAreaElement) {
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_PX)}px`;
+    // border-box: scrollHeight excludes the border, so add it back or the
+    // field is 2px short and shows a scrollbar on a single line.
+    const full = el.scrollHeight + el.offsetHeight - el.clientHeight;
+    el.style.height = `${Math.min(full, MAX_INPUT_PX)}px`;
+    el.style.overflowY = full > MAX_INPUT_PX ? "auto" : "hidden";
   }
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
