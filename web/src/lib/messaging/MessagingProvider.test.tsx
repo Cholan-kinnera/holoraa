@@ -100,7 +100,9 @@ describe("MessagingProvider & ConversationView Integration", () => {
 
     expect(container.textContent).toContain("Bob");
     expect(container.textContent).toContain("@bob");
-    expect(container.textContent).toContain("2 messages synchronized.");
+    const bubbles = [...container.querySelectorAll(".msg")].map((el) => el.textContent);
+    expect(bubbles).toEqual(["You: First message from Alice", "Reply from Bob"]);
+    expect(container.textContent).not.toContain("synchronized");
   });
 
   it("hydrates initial server-fetched messages into state", async () => {
@@ -229,7 +231,7 @@ describe("MessagingProvider & ConversationView Integration", () => {
     });
 
     expect(container.textContent).toContain("Bob");
-    expect(container.textContent).toContain("2 messages synchronized.");
+    expect(container.querySelectorAll(".msg")).toHaveLength(2);
   });
 
   describe("Keyset pagination cursor derivation (Finding 2)", () => {
