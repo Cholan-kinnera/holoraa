@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -9,6 +9,7 @@ import type { RealtimeConnectionState } from "@/lib/messaging/realtime-types";
 import { useMessaging } from "@/lib/messaging/useMessaging";
 
 import { MessageList } from "./MessageList";
+import { useThreadScroll } from "./useThreadScroll";
 
 const LIVE_LABEL: Record<RealtimeConnectionState, { text: string; tone: "on" | "wait" | "off" }> = {
   CONNECTED: { text: "Live", tone: "on" },
@@ -42,6 +43,7 @@ export function ConversationView({
     selectConversation,
     hydrateConversationMessages,
     loadConversationMessages,
+    loadOlderMessages,
     markAsRead,
     activeConversation,
     activeMessages,
@@ -93,9 +95,21 @@ export function ConversationView({
   // Pagination exists once this conversation's first page is in state. Until
   // then (including the server render) show a placeholder, so timestamps are
   // only ever formatted in the viewer's own time zone.
-  const loaded = pagination[conversationId] !== undefined;
+  const pag = pagination[conversationId];
+  const loaded = pag !== undefined;
   const loadError = messagesError[conversationId];
   const live = LIVE_LABEL[connectionState];
+
+  const loadOlder = useCallback(() => {
+    void loadOlderMessages(conversationId);
+  }, [loadOlderMessages, conversationId]);
+  const { scrollRef, sentinelRef, onScroll, atBottom, unseen, jumpToLatest } = useThreadScroll({
+    conversationId,
+    messages: activeMessages,
+    currentUserId,
+    canLoadOlder: !!pag && pag.hasMoreOlder && !pag.loadingOlder && !pag.olderError,
+    loadOlder,
+  });
 
   return (
     <section
@@ -125,7 +139,8 @@ export function ConversationView({
         </div>
       </header>
 
-      <div className="thread__scroll">
+      <div className="thread__viewport">
+      <div className="thread__scroll" ref={scrollRef} onScroll={onScroll}>
         <div className="thread__content">
           {conversation.status === "pending" && (
             <p className="thread__notice" role="status">
@@ -163,9 +178,37 @@ export function ConversationView({
               <p>No messages yet. Say hello to {peerName}.</p>
             </div>
           ) : (
-            <MessageList messages={activeMessages} currentUserId={currentUserId} />
+            <>
+              <div ref={sentinelRef} className="thread__top">
+                {pag.loadingOlder ? (
+                  <span className="thread__top-note" role="status">
+                    <span className="spinner" aria-hidden="true" />
+                    Loading earlier messages…
+                  </span>
+                ) : pag.olderError ? (
+                  <span className="thread__top-note" role="alert">
+                    Couldn’t load earlier messages.
+                    <button type="button" className="link-button" onClick={loadOlder}>
+                      Retry
+                    </button>
+                  </span>
+                ) : !pag.hasMoreOlder ? (
+                  <span className="thread__top-note">This is the start of your conversation with {peerName}.</span>
+                ) : null}
+              </div>
+              <MessageList messages={activeMessages} currentUserId={currentUserId} />
+            </>
           )}
         </div>
+      </div>
+      {!atBottom && (
+        <button type="button" className="thread__jump" onClick={jumpToLatest}>
+          {unseen > 0 ? `${unseen} new message${unseen === 1 ? "" : "s"}` : "Latest"}
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+            <path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
       </div>
     </section>
   );
