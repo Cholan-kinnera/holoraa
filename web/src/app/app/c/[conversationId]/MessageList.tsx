@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
 import type { MessageDeliveryStatus, UiMessage } from "@/lib/messaging/state";
 import { buildThread } from "@/lib/messaging/thread";
@@ -62,9 +62,12 @@ export function StatusTick({ status }: { status: MessageDeliveryStatus }) {
 export function MessageList({
   messages,
   currentUserId,
+  onRetry,
 }: {
   messages: UiMessage[];
   currentUserId: string | null;
+  /** Resends a failed message by its client id. */
+  onRetry?: (clientMessageId: string) => void;
 }) {
   const items = useMemo(() => buildThread(messages, currentUserId), [messages, currentUserId]);
 
@@ -83,21 +86,29 @@ export function MessageList({
         return (
           <li key={item.key} className={item.mine ? "msg-group msg-group--mine" : "msg-group"}>
             {item.messages.map((m) => (
-              <p
-                key={m.clientMessageId}
-                className={`msg msg--${m.deliveryStatus}`}
-                title={formatFullTimestamp(m.createdAt)}
-              >
-                <span className="sr-only">{item.mine ? "You: " : ""}</span>
-                {m.content}
-                {m.deliveryStatus === "failed" && <span className="sr-only"> (not sent)</span>}
-              </p>
+              <Fragment key={m.clientMessageId}>
+                <p className={`msg msg--${m.deliveryStatus}`} title={formatFullTimestamp(m.createdAt)}>
+                  <span className="sr-only">{item.mine ? "You: " : ""}</span>
+                  {m.content}
+                  {m.deliveryStatus === "failed" && <span className="sr-only"> (not sent)</span>}
+                </p>
+                {m.deliveryStatus === "failed" && (
+                  <p className="msg-failed" role="alert">
+                    <span>{m.error || "Not sent."}</span>
+                    {onRetry && (
+                      <button type="button" className="link-button" onClick={() => onRetry(m.clientMessageId)}>
+                        Retry
+                      </button>
+                    )}
+                  </p>
+                )}
+              </Fragment>
             ))}
             <p className="msg-group__meta">
               <time dateTime={last.createdAt} title={formatFullTimestamp(last.createdAt)}>
                 {formatClockTime(last.createdAt)}
               </time>
-              {item.mine && <StatusTick status={last.deliveryStatus} />}
+              {item.mine && last.deliveryStatus !== "failed" && <StatusTick status={last.deliveryStatus} />}
             </p>
           </li>
         );

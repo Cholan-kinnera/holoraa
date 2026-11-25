@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MessageDeliveryStatus, UiMessage } from "@/lib/messaging/state";
 
@@ -76,10 +76,16 @@ describe("MessageList", () => {
     expect(container.querySelector(`.msg-status--${status}`)?.getAttribute("aria-label")).toBe(label);
   });
 
-  it("marks a failed message visibly and for screen readers", async () => {
-    await render([msg(ME, 0, "failed")]);
+  it("marks a failed message and offers a retry", async () => {
+    const failed = { ...msg(ME, 0, "failed"), error: "You can only send one message until accepted." };
+    const onRetry = vi.fn();
+    await act(() => root.render(<MessageList messages={[failed]} currentUserId={ME} onRetry={onRetry} />));
+
     expect(container.querySelector(".msg--failed")?.textContent).toContain("(not sent)");
-    expect(container.querySelector(".msg-status--failed")?.textContent).toBe("Not sent");
+    expect(container.querySelector(".msg-failed")?.textContent).toContain("only send one message");
+    expect(container.querySelector(".msg-status")).toBeNull();
+    act(() => container.querySelector<HTMLButtonElement>(".msg-failed button")!.click());
+    expect(onRetry).toHaveBeenCalledWith(failed.clientMessageId);
   });
 
   it("keeps message text as plain text", async () => {

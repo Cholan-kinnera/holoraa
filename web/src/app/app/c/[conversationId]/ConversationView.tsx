@@ -8,6 +8,7 @@ import type { Conversation, Message } from "@/lib/messaging/flows";
 import type { RealtimeConnectionState } from "@/lib/messaging/realtime-types";
 import { useMessaging } from "@/lib/messaging/useMessaging";
 
+import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
 import { useThreadScroll } from "./useThreadScroll";
 
@@ -44,6 +45,8 @@ export function ConversationView({
     hydrateConversationMessages,
     loadConversationMessages,
     loadOlderMessages,
+    sendMessage,
+    retryMessage,
     markAsRead,
     activeConversation,
     activeMessages,
@@ -99,6 +102,30 @@ export function ConversationView({
   const loaded = pag !== undefined;
   const loadError = messagesError[conversationId];
   const live = LIVE_LABEL[connectionState];
+
+  const iAmRecipient = conversation.initiatedBy !== currentUserId;
+  const iHaveSent = activeMessages.some(
+    (m) => m.senderId === currentUserId && m.deliveryStatus !== "failed",
+  );
+  // Mirrors the server's rules, so the composer never offers a send that the
+  // API would reject. The server still enforces them.
+  const disabledReason =
+    conversation.status === "declined"
+      ? "This request was declined. No further messages can be sent."
+      : conversation.status === "pending" && iAmRecipient
+        ? `Accept the request to reply to ${peerName}.`
+        : conversation.status === "pending" && iHaveSent
+          ? `You can send more once ${peerName} accepts your request.`
+          : null;
+
+  const send = useCallback(
+    (content: string) => void sendMessage(conversationId, content),
+    [sendMessage, conversationId],
+  );
+  const retry = useCallback(
+    (clientMessageId: string) => void retryMessage(conversationId, clientMessageId),
+    [retryMessage, conversationId],
+  );
 
   const loadOlder = useCallback(() => {
     void loadOlderMessages(conversationId);
@@ -196,7 +223,7 @@ export function ConversationView({
                   <span className="thread__top-note">This is the start of your conversation with {peerName}.</span>
                 ) : null}
               </div>
-              <MessageList messages={activeMessages} currentUserId={currentUserId} />
+              <MessageList messages={activeMessages} currentUserId={currentUserId} onRetry={retry} />
             </>
           )}
         </div>
@@ -210,6 +237,7 @@ export function ConversationView({
         </button>
       )}
       </div>
+      {loaded && <Composer peerName={peerName} disabledReason={disabledReason} onSend={send} />}
     </section>
   );
 }
