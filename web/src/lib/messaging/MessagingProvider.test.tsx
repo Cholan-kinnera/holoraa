@@ -12,6 +12,12 @@ import { AppShell } from "@/components/app/AppShell";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// ConversationView navigates after a declined request; no app router is mounted here.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => null,
+}));
+
 const testUser: User = {
   id: "11111111-1111-4111-8111-111111111111",
   email: "alice@example.com",

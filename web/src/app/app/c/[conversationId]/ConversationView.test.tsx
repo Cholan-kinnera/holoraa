@@ -54,7 +54,7 @@ const myMessage: Message = {
   createdAt: "2026-11-25T10:00:00Z",
 };
 
-describe("ConversationView composer rules", () => {
+describe("ConversationView composer and request rules", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -95,10 +95,49 @@ describe("ConversationView composer rules", () => {
     expect(textarea()?.disabled).toBe(false);
   });
 
-  it("locks for the recipient of a pending request", async () => {
+  it("shows the request bar instead of the composer to the recipient", async () => {
     await render(conversation({ status: "pending", initiatedBy: BOB.id }), []);
-    expect(textarea()?.disabled).toBe(true);
-    expect(container.textContent).toContain("Accept the request to reply to Bob.");
+    expect(textarea()).toBeNull();
+    expect(container.textContent).toContain("Bob wants to message you");
+  });
+
+  const button = (label: string) =>
+    [...container.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)!;
+
+  it("opens the conversation when the recipient accepts", async () => {
+    const actions = await import("@/app/app/messages/actions");
+    const accept = vi
+      .spyOn(actions, "acceptMessageRequestAction")
+      .mockResolvedValue({ ok: true, conversation: conversation() });
+    await render(conversation({ status: "pending", initiatedBy: BOB.id }), []);
+
+    await act(async () => button("Accept").click());
+    expect(accept).toHaveBeenCalledWith(CONV_ID);
+    expect(textarea()?.disabled).toBe(false);
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("returns to the inbox when the recipient declines", async () => {
+    const actions = await import("@/app/app/messages/actions");
+    const decline = vi
+      .spyOn(actions, "declineMessageRequestAction")
+      .mockResolvedValue({ ok: true, conversation: conversation({ status: "declined" }) });
+    await render(conversation({ status: "pending", initiatedBy: BOB.id }), []);
+
+    await act(async () => button("Decline").click());
+    expect(decline).toHaveBeenCalledWith(CONV_ID);
+    expect(routerPush).toHaveBeenCalledWith("/app");
+  });
+
+  it("keeps the request open and explains a failed decision", async () => {
+    const actions = await import("@/app/app/messages/actions");
+    vi.spyOn(actions, "acceptMessageRequestAction").mockResolvedValue({ ok: false, message: "Network down." });
+    await render(conversation({ status: "pending", initiatedBy: BOB.id }), []);
+
+    await act(async () => button("Accept").click());
+    expect(container.querySelector("[role=alert]")?.textContent).toBe("Network down.");
+    expect(button("Accept").disabled).toBe(false);
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
   it("lets the sender of a pending request send a first message", async () => {

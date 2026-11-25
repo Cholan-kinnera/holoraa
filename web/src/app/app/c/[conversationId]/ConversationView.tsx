@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,6 +11,7 @@ import { useMessaging } from "@/lib/messaging/useMessaging";
 
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
+import { RequestBar } from "./RequestBar";
 import { useThreadScroll } from "./useThreadScroll";
 
 const LIVE_LABEL: Record<RealtimeConnectionState, { text: string; tone: "on" | "wait" | "off" }> = {
@@ -47,6 +49,8 @@ export function ConversationView({
     loadOlderMessages,
     sendMessage,
     retryMessage,
+    acceptRequest,
+    declineRequest,
     markAsRead,
     activeConversation,
     activeMessages,
@@ -56,6 +60,7 @@ export function ConversationView({
     messagesError,
   } = useMessaging();
 
+  const router = useRouter();
   const prevConvIdRef = useRef<string | null>(null);
 
   // Sync active conversation selection and initial messages
@@ -127,6 +132,14 @@ export function ConversationView({
     [retryMessage, conversationId],
   );
 
+  const accept = useCallback(() => acceptRequest(conversationId), [acceptRequest, conversationId]);
+  // The list hides declined conversations, so leave for the inbox once declined.
+  const decline = useCallback(async () => {
+    const res = await declineRequest(conversationId);
+    if (res.ok) router.push("/app");
+    return res;
+  }, [declineRequest, conversationId, router]);
+
   const loadOlder = useCallback(() => {
     void loadOlderMessages(conversationId);
   }, [loadOlderMessages, conversationId]);
@@ -169,17 +182,9 @@ export function ConversationView({
       <div className="thread__viewport">
       <div className="thread__scroll" ref={scrollRef} onScroll={onScroll}>
         <div className="thread__content">
-          {conversation.status === "pending" && (
+          {conversation.status === "pending" && !iAmRecipient && (
             <p className="thread__notice" role="status">
-              {conversation.initiatedBy !== currentUserId
-                ? "Message request: this user wants to start a conversation with you."
-                : "Message request sent. Senders can only send 1 message until accepted."}
-            </p>
-          )}
-
-          {conversation.status === "declined" && (
-            <p className="thread__notice thread__notice--declined" role="status">
-              This message request was declined. No further messages can be sent.
+              Request sent. You can send one message until {peerName} accepts.
             </p>
           )}
 
@@ -237,7 +242,12 @@ export function ConversationView({
         </button>
       )}
       </div>
-      {loaded && <Composer peerName={peerName} disabledReason={disabledReason} onSend={send} />}
+      {loaded &&
+        (conversation.status === "pending" && iAmRecipient ? (
+          <RequestBar peerName={peerName} onAccept={accept} onDecline={decline} />
+        ) : (
+          <Composer peerName={peerName} disabledReason={disabledReason} onSend={send} />
+        ))}
     </section>
   );
 }
