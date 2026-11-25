@@ -1314,11 +1314,6 @@ textarea::placeholder {
   opacity: 0.9;
 }
 
-.status-brand-name {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
 .page h1 {
   margin: var(--space-2) 0 var(--space-2);
   font-family: var(--font-display);
@@ -3141,45 +3136,26 @@ html:has(.thread) body {
   scrollbar-width: none;
 }
 
-/* ---------- Reserved Branding Slots ---------- */
+/* ---------- Brand ---------- */
 
-.brand-mark-reserved {
+.brand-mark {
+  display: block;
+  flex: none;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-logo-lockup {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #ffffff;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.875rem;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  flex-shrink: 0;
-  transition: all var(--dur-fast) ease;
+  gap: 0.5rem;
+  flex: none;
+  line-height: 0;
 }
 
-.brand-mark-reserved:hover {
-  background: linear-gradient(135deg, rgba(232, 108, 79, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border-color: rgba(232, 108, 79, 0.4);
-  color: #E86C4F;
-}
-
-.brand-mark-text {
-  line-height: 1;
-}
-
-.brand-logo-reserved {
-  display: inline-block;
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-  text-decoration: none;
-  white-space: nowrap;
+.brand-logo-lockup__word {
+  display: block;
+  width: auto;
 }
 
 /* ---------- Floating Navbar Component ---------- */

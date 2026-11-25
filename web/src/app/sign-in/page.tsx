@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { BrandMark } from "@/components/ui/Brand";
+import { BrandLogo } from "@/components/ui/Brand";
 import { getSession } from "@/lib/auth/server";
 
 import { SignInForm } from "./SignInForm";
@@ -23,8 +23,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
       <div className="auth__backdrop" aria-hidden="true" />
       <div className="auth__card glass">
         <Link href="/" className="brand" aria-label="Holoraa home">
-          <BrandMark />
-          <span>Holoraa</span>
+          <BrandLogo size={32} />
         </Link>
         <div>
           <p className="eyebrow">Sign in</p>

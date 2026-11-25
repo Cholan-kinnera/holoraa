@@ -86,7 +86,7 @@ export function HoloraaApp() {
       <footer className="py-12 border-t hairline-border bg-oled-black text-center text-xs text-ink-muted">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <BrandLogo className="text-sm font-semibold tracking-tight text-white" />
+            <BrandLogo size={20} />
             <span>·</span>
             <span>One quiet place for the people who matter.</span>
           </div>

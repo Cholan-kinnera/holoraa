@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { BrandMark } from "@/components/ui/Brand";
+import { BrandLogo } from "@/components/ui/Brand";
 import { createApiClient, readApiBaseUrl } from "@/lib/api/client";
 import { loadStatus, type CheckState, type StatusReport } from "@/lib/status";
 
@@ -27,8 +27,7 @@ export default async function StatusPage() {
     <main className="page">
       <header>
         <Link href="/" className="brand status-brand-link">
-          <BrandMark />
-          <span className="status-brand-name">Holoraa</span>
+          <BrandLogo />
         </Link>
         <p className="eyebrow">System verification</p>
         <h1>System status</h1>

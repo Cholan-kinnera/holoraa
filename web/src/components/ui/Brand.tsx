@@ -1,28 +1,43 @@
+/* eslint-disable @next/next/no-img-element -- small static brand PNGs, served as-is. */
+
 /**
- * Branding component for Holoraa.
- *
- * The official Holoraa logo will be provided separately.
- * In accordance with project instructions:
- * - No logo is generated or invented.
- * - Logo placement is reserved with appropriate sizing.
- * - A clean, understated text label is used.
+ * Holoraa brand. Assets in public/brand are lifted from the official logo
+ * (ref/logo-source.png) onto a transparent background. They are made for
+ * the dark theme: the glow reads as haze on light backgrounds.
  */
 
-export function BrandMark({ className = "" }: { size?: number; className?: string } = {}) {
+const MARK = { src: "/brand/holoraa-mark.png", width: 160, height: 136 };
+const WORDMARK = { src: "/brand/holoraa-wordmark.png", width: 480, height: 109 };
+
+/** The symbol alone. Decorative: pair it with text or a labelled link. */
+export function BrandMark({ size = 28, className = "" }: { size?: number; className?: string } = {}) {
   return (
-    <span className={`brand-mark-reserved ${className}`} aria-hidden="true">
-      <span className="brand-mark-text">h</span>
-    </span>
+    <img
+      src={MARK.src}
+      alt=""
+      aria-hidden="true"
+      width={Math.round((size * MARK.width) / MARK.height)}
+      height={size}
+      className={`brand-mark ${className}`}
+      decoding="async"
+    />
   );
 }
 
-
-
-
-export function BrandLogo({ className = "" }: { className?: string; width?: number }) {
+/** Symbol and wordmark side by side. Its accessible name is "Holoraa". */
+export function BrandLogo({ size = 28, className = "" }: { size?: number; className?: string } = {}) {
+  const wordHeight = Math.round(size * 0.62);
   return (
-    <span className={`brand-logo-reserved font-semibold tracking-tight text-white font-sans ${className}`}>
-      holoraa
+    <span className={`brand-logo-lockup ${className}`}>
+      <BrandMark size={size} />
+      <img
+        src={WORDMARK.src}
+        alt="Holoraa"
+        width={Math.round((wordHeight * WORDMARK.width) / WORDMARK.height)}
+        height={wordHeight}
+        className="brand-logo-lockup__word"
+        decoding="async"
+      />
     </span>
   );
 }
